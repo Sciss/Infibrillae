@@ -6,7 +6,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>in|fibrillae</title>
-    <link href="lucre-swing.css" rel="stylesheet">
+    <link href="assets/lucre-swing.css" rel="stylesheet">
     <script type="text/javascript" src="lib/main.js"></script>
     <style>
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
@@ -18,6 +18,7 @@
       }
 
       h1 {
+        font-family: 'VoltaireRegular';
         font-size: 24px;
       }
 
@@ -28,6 +29,7 @@
       a.infib-ext:before {
         content: "⛶\0000a0";
       }
+
       #boot {
         float: left;
         font-size: 12px;
@@ -64,6 +66,19 @@
         font-size: 11px;
         outline: none;
       }
+
+      @font-face {
+        font-family: 'VoltaireRegular';
+        src: url('assets/Voltaire-Regular.ttf');
+      }
+
+      #canvas {
+      }
+
+      #visual {
+        max-width: 400px;
+        cursor: crosshair;
+      }
     </style>
 </head>
 <body>
@@ -83,17 +98,21 @@
 <p>
     For more information on <em>in|fibrillae</em>, please
     see <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/1111185" target="_blank">project documentation</a>.
-    Minimum browser requirement: Firefox 79, Chrome/Chromium 68. Mobile phones currently not supported.
+    Minimum browser requirement: Firefox&nbsp;79, Chrome/Chromium&nbsp;68. Mobile phones currently not supported.
 </p><p>
-    Press the <em>Start</em> button to begin. Note that currently it can take several minutes until you hear the
+    Press the <em>Start</em> button to begin. <strong>Note</strong> that currently it can take several minutes until you hear the
     first bleeps and noises (or repeatedly click on the circular 'bang' button).
     Please feel invited to keep the page open while turning to other activities on your
-    computer.
+    computer. During <em>xCoAx</em> review, if you revisit this page, please purge the cache and explicitly
+    reload the page in the browser, as there might be updates. Thank you!
 </p><p>
     The piece released under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)
-    license. The underlying software released under AGPL and GPL licenses. Please refer to
+    license. The underlying software released under AGPL and GPL licenses. The font is Voltaire-Regular by
+    Yvonne Sch&uumlttler, released under Open Font License.
+    Please refer to
     <a class="infib-ext" href="https://github.com/Sciss/Infibrillae" target="_blank">source repository</a>.
 </p>
+<div id="visual"><canvas id="canvas" width="400" height="400"></canvas></div>
 <div id="piece"></div>
 <!--
 <div id='controls'>

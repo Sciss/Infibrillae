@@ -11,15 +11,16 @@
  *  contact@sciss.de
  */
 
-package de.sciss.proc
+package de.sciss.infibrillae
 
 import com.raquo.laminar.api.L.{documentEvents, render, unsafeWindowOwner}
 import de.sciss.asyncfile.AsyncFile
 import de.sciss.audiofile.AudioFile
 import de.sciss.log.Level
 import de.sciss.lucre.synth.Executor
+import de.sciss.proc.{Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 import de.sciss.synth.{Server => SServer}
-import de.sciss.{/*fscape,*/ osc, synth}
+import de.sciss.{osc, synth}
 import org.scalajs.dom
 
 import scala.scalajs.js
@@ -60,6 +61,18 @@ object Infibrillae {
         u.auralSystem.connect(sCfg, cCfg)
       }
     }
+  }
+
+  private var visualOpt = Option.empty[Visual]
+
+  @JSExportTopLevel("setComposite")
+  def setComposite(code: String): Unit = {
+    visualOpt.foreach(_.setComposite(code))
+  }
+
+  @JSExportTopLevel("setTextColor")
+  def setTextColor(code: String): Unit = {
+    visualOpt.foreach(_.setTextColor(code))
   }
 
   @JSExportTopLevel("dumpOSC")
@@ -105,18 +118,24 @@ object Infibrillae {
 
     SoundProcesses.logAural.level = Level.Info  // Debug
 
-    val container: dom.Element = dom.document.querySelector("#piece")
+    val container: dom.Element = dom.document.getElementById("piece")
 
 //    val fut = DirectWorkspace()
     val fut = LoadWorkspace()
+
+    import Executor.executionContext
 
     fut.onComplete {
       case Success((universe, view)) =>
         universeOpt = Some(universe)
         /*val root: RootNode =*/ render(container, view.component)
+        Visual().foreach { v =>
+          visualOpt = Some(v)
+        }
+
       case Failure(ex) =>
         ex.printStackTrace()
-    } (Executor.executionContext)
+    }
 
     println("End of main.")
   }

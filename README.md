@@ -1,6 +1,6 @@
 # in|fibrillae
 
-[![Build Status](https://github.com/Sciss/infibrillae/workflows/Scala%20CI/badge.svg?branch=main)](https://github.com/Sciss/infibrillae/actions?query=workflow%3A%22Scala+CI%22)
+[![Build Status](https://github.com/Sciss/Infibrillae/workflows/Scala%20CI/badge.svg?branch=main)](https://github.com/Sciss/Infibrillae/actions?query=workflow%3A%22Scala+CI%22)
 
 ## statement
 
@@ -17,13 +17,14 @@ Software based on:
 
 The SoundProcesses/Mellite workspace file `workspace.mllt.bin` is released under
 Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) license.
+The font is Voltaire-Regular by Yvonne Schüttler, released under Open Font License.
 
 This project is (C)opyright 2020–2021 by Hanns Holger Rutz & Nayarí Castillo. All rights reserved.
 To contact us, send an e-mail to `contact at sciss.de`.
 
 ## building from source
 
-Because the binary workspace `workspace.mllt.bin` is a rather large blob that is not suited for
+Because the binary workspace `assets/workspace.mllt.bin` is a rather large blob that is not suited for
 a git repository, the source `workspace.mllt` is included, and it must be exported as a binary workspace
 using Mellite 3.4.0-SNAPSHOT or newer (currently in development, you can build Mellite from source).
 Open `workspace.mllt` and choose the menu item _File_ > _Export Binary Workspace_.
