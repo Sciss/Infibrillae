@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>in|fibrillae</title>
+    <link href="lucre-swing.css" rel="stylesheet">
+    <script type="text/javascript" src="lib/main.js"></script>
+    <style>
+      .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
+      div.emscripten { text-align: center; }
+      div.emscripten_border { border: 1px solid black; }
+
+      body {
+        margin: 10%;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      a.infib-ext:before {
+        content: "⛶\0000a0";
+      }
+      #boot {
+        float: left;
+        font-size: 12px;
+        margin-left: 4px;
+        margin-bottom: 4px;
+      }
+
+      #status {
+        display: inline-block;
+        vertical-align: top;
+        margin-top: 30px;
+        margin-left: 20px;
+        font-weight: bold;
+        color: rgb(120, 120, 120);
+      }
+
+      #controls {
+        vertical-align: top;
+        margin-top: 16px;
+        margin-right: 16px;
+      }
+
+      #output {
+        width: 100%;
+        height: 120px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        border-left: 0px;
+        border-right: 0px;
+        padding-left: 0px;
+        padding-right: 0px;
+        display: block;
+        font-family: 'Lucida Console', Monaco, monospace;
+        font-size: 11px;
+        outline: none;
+      }
+    </style>
+</head>
+<body>
+<!--<button onclick="Infibrillae.run();">Click to Start</button>-->
+<h1>in|fibrillae</h1>
+<h2>A sound piece for the web browser</h2>
+<p>Hanns Holger Rutz &amp; Nayar&iacute; Castillo, 2021</p>
+<p>
+    This page shows a <strong>work in progress</strong>. <em>in|fibrillae</em> is based on the
+    physical multi-channel installation <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/711665" target="_blank">in|filtration</a>.
+</p><p>
+    For project context, please see <a class="infib-ext" href="https://diode.zone/videos/watch/6a6491f5-1ce1-4a54-bbfa-e419d1878858?subtitle=en" target="_blank">this video statement</a>.
+</p>
+<!--
+<iframe width="560" height="315" sandbox="allow-same-origin allow-scripts allow-popups" src="https://diode.zone/videos/embed/6a6491f5-1ce1-4a54-bbfa-e419d1878858?subtitle=en" frameborder="0" allowfullscreen></iframe><p>
+-->
+<p>
+    For more information on <em>in|fibrillae</em>, please
+    see <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/1111185" target="_blank">project documentation</a>.
+    Minimum browser requirement: Firefox 79, Chrome/Chromium 68. Mobile phones currently not supported.
+</p><p>
+    Press the <em>Start</em> button to begin. Note that currently it can take several minutes until you hear the
+    first bleeps and noises (or repeatedly click on the circular 'bang' button).
+    Please feel invited to keep the page open while turning to other activities on your
+    computer.
+</p><p>
+    The piece released under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)
+    license. The underlying software released under AGPL and GPL licenses. Please refer to
+    <a class="infib-ext" href="https://github.com/Sciss/Infibrillae" target="_blank">source repository</a>.
+</p>
+<div id="piece"></div>
+<!--
+<div id='controls'>
+    <input type="button" id="boot" disabled="disabled" value="Boot scsynth" onclick="boot();">
+</div>
+-->
+<span class="emscripten" id="status"></span>
+<textarea id="output" rows="8"></textarea>
+
+<script type='text/javascript'>
+  var statusElement   = document.getElementById('status');
+  var bootElement     = document.getElementById('boot');
+
+  var boot = function() {
+    var bootEl    = document.getElementById('boot');
+    var args      = Module['arguments'];
+    args[args.indexOf('-i') + 1] = '0';
+    args[args.indexOf('-o') + 1] = '2';
+    Module.callMain(args);
+    Infibrillae.startAural();
+    if (bootEl  ) bootEl  .disabled = true;
+  }
+
+  var Module = {
+    preRun: [],
+    postRun: [],
+    print: (function() {
+      var element = document.getElementById('output');
+      if (element) element.value = ''; // clear browser cache
+      return function(text) {
+        if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+        // These replacements are necessary if you render to raw HTML
+        //text = text.replace(/&/g, "&amp;");
+        //text = text.replace(/</g, "&lt;");
+        //text = text.replace(/>/g, "&gt;");
+        //text = text.replace('\n', '<br>', 'g');
+        console.log(text);
+        if (element) {
+          element.value += text + "\n";
+          element.scrollTop = element.scrollHeight; // focus on bottom
+        }
+      };
+    })(),
+    printErr: function(text) {
+      if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+      console.error(text);
+    },
+    setStatus: function(text) {
+      if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+      if (text === Module.setStatus.last.text) return;
+      var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+      var now = Date.now();
+      if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+      Module.setStatus.last.time = now;
+      Module.setStatus.last.text = text;
+      if (m) {
+        text = m[1];
+      }
+      statusElement.innerHTML = text;
+    },
+    totalDependencies: 0,
+    monitorRunDependencies: function(left) {
+      this.totalDependencies = Math.max(this.totalDependencies, left);
+      Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+    },
+    onRuntimeInitialized: function() {
+      if (bootElement) bootElement.disabled = false;
+    }
+  };
+  Module.setStatus('Downloading scsynth...');
+  window.onerror = function(event) {
+    // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+    Module.setStatus('Exception thrown, see JavaScript console');
+    Module.setStatus = function(text) {
+      if (text) Module.printErr('[post-exception status] ' + text);
+    };
+  };
+</script>
+<script async type="text/javascript" src="lib/scsynth.js"></script>
+</body>
+</html>

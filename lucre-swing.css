@@ -1,0 +1,68 @@
+div.lucre-border-panel-north {
+  grid-area: north;
+}
+div.lucre-border-panel-west {
+  grid-area: west;
+}
+div.lucre-border-panel-center {
+  grid-area: center;
+}
+div.lucre-border-panel-east {
+  grid-area: east;
+}
+div.lucre-border-panel-south {
+  grid-area: south;
+}
+
+div.lucre-border-panel-north, div.lucre-border-panel-south {
+  display: flex;
+  justify-content: center;
+}
+
+div.lucre-border-panel {
+  display: grid;
+  grid-template-areas:
+    'north north north'
+    'west center east'
+    'south south south';
+  align-items: center;
+  grid-template-columns: max-content max-content max-content;
+  grid-template-rows:    0fr 1fr 0fr;
+}
+
+div.lucre-border-panel-child {}
+
+div.lucre-grid-panel {
+  display: grid;
+  align-items: baseline;
+}
+
+span.lucre-unit {
+  padding-left: 0.5ex;
+}
+
+input.lucre-slider {
+  vertical-align:middle;  /* better matches baseline alignment */
+}
+
+button.lucre-bang {
+  padding: 0;
+}
+
+svg.lucre-bang {
+  height: 1.4em;
+  width: 1.4em;
+}
+
+circle.lucre-bang {
+  cx: 0.68em;
+  cy: 0.68em;
+  r: 0.65em;
+  fill: none;
+  stroke: black;
+  stroke-width: 0.08em;
+}
+
+circle.lucre-bang-flash {
+  fill: black;
+}
