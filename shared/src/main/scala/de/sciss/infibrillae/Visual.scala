@@ -16,10 +16,9 @@ package de.sciss.infibrillae
 import de.sciss.lucre.synth.Executor.executionContext
 import de.sciss.lucre.synth.Server
 import de.sciss.numbers.Implicits._
-import de.sciss.osc
 import de.sciss.synth.message
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Future
 import scala.math.{Pi, min}
 import scala.util.control.NonFatal
 
@@ -50,7 +49,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private var trunkTgtX = trunkX
   private var trunkTgtY = trunkY
   private var composite: Composite = Composite.ColorBurn
-  private var textColor: Color = Color.RGB8(0xCCC)
+  private var textColor: Color = Color.RGB4(0xCCC)
   private var palabra   = "in|fibrillae"
   private var palabraX  = 100.0
   private var palabraY  = 100.0

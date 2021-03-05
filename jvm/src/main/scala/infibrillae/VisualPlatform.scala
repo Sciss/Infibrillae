@@ -1,5 +1,0 @@
-package infibrillae
-
-trait VisualPlatform {
-
-}

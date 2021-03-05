@@ -3,7 +3,8 @@ package de.sciss.infibrillae
 object Color {
   def parse(s: String): Color = ???
 
-  final case class RGB8(value: Int) extends Color {
+  /** 4-bit value 0xRGB */
+  final case class RGB4(value: Int) extends Color {
     private lazy val _cssString = {
       val h = ((value & 0xFFF) | 0x1000).toHexString
       s"#${h.substring(h.length - 3)}"

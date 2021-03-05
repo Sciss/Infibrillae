@@ -19,7 +19,7 @@ class WebGraphics2D(_peer: CanvasRenderingContext2D) extends Graphics2D {
     _peer.font = value.cssString
   }
 
-  private var _fillStyle: Color = Color.RGB8(0)
+  private var _fillStyle: Color = Color.RGB4(0)
 
   override def fillStyle: Color = _fillStyle
   override def fillStyle_=(value: Color): Unit = {

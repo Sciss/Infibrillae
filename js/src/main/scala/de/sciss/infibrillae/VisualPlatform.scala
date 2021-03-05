@@ -23,5 +23,4 @@ trait VisualPlatform {
     peer.src = path
     pr.future
   }
-
 }
