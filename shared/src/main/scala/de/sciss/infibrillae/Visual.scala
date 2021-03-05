@@ -91,12 +91,12 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     palabra   = s
     palabraX  = x
     palabraY  = y
-    repaint()
+//    repaint()
   }
 
   def setTextColor(name: String): Unit = {
     textColor = Color.parse(name)
-    repaint()
+//    repaint()
   }
 
   def setTrunkPos(x: Double, y: Double): Unit = {

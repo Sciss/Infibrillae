@@ -16,6 +16,7 @@ package de.sciss.infibrillae
 import de.sciss.file._
 import de.sciss.infibrillae.Visual.RecFrame
 import de.sciss.lucre.synth.Executor
+import de.sciss.numbers.Implicits.doubleNumberWrapper
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 
 import java.awt.{BorderLayout, Cursor, EventQueue}
@@ -36,6 +37,14 @@ object Infibrillae {
   private var universeOpt = Option.empty[Universe[T]]
 
   private var visualOpt = Option.empty[Visual[AWTGraphics2D]]
+
+  case class Palabra(s: String, x: Double, y: Double)
+
+  val palabras = Seq(
+    Palabra("phantom limb", 104.0, 100.0),
+    Palabra("fata morgana", 100.0, 100.0),
+    Palabra( "nystagmus"  , 100.0, 100.0),
+  )
 
   def run(): Unit = {
 
@@ -64,47 +73,58 @@ object Infibrillae {
                 } else {
                   val frames = Visual.recFrames
                   Visual.recording = false
-                  frames.headOption match {
-                    case None => println("Recording is empty!")
-
-                    case Some(frame0) =>
-                      val fmt = new SimpleDateFormat("'Record start: 'HH'h'mm'm'ss.SSS's'", Locale.US)
-                      println(fmt.format(new Date(frame0.time)))
+                  (frames.headOption, frames.lastOption) match {
+                    case (Some(frameFirst), Some(frameLast)) =>
+                      val fmt = new SimpleDateFormat("HH'h'mm'm'ss.SSS's'", Locale.US)
+                      println(s"Record Start: ${fmt.format(new Date(frameFirst.time))}")
+                      println(s"Record Stop : ${fmt.format(new Date(frameLast.time))}")
                       canvas.manualMode = true
                       visualOpt.foreach { vis =>
                         val dirOut = userHome / "Documents" / "infib_rec"
                         dirOut.mkdirs()
-                        vis.setTrunkPos(frame0.trunkX, frame0.trunkY)
+                        vis.setTrunkPos(frameFirst.trunkX, frameFirst.trunkY)
                         vis.setAnimTime(-0.1)
                         toggle.enabled = false
                         val fps = 25.0
 
-                        def invoke(rem: Vector[RecFrame], frameIdx: Int): Unit =
-                          rem match {
-                            case frame +: tail =>
-                              val outTime = (frameIdx / fps) * 1000
-                              val inTime  = (frame.time - frame0.time).toDouble
-                              if (inTime < outTime) {
-                                invoke(tail, frameIdx = frameIdx)
-                              } else {
-                                vis.setTrunkTargetPos(frame.trunkX, frame.trunkY)
-                                canvas.manualTime = outTime
-                                canvas.requestAnimationFrame { (g2, time) =>
-                                  vis.paint(g2, time)
-                                  val fOut = dirOut / f"frame-${frameIdx + 1}%04d.png"
-                                  canvas.saveImage(fOut)
-                                  invoke(tail, frameIdx = frameIdx + 1)
-                                }
-                                canvas.peer.repaint()
-                              }
+                        val durMs     = frameLast.time - frameFirst.time
+                        val numFrames = math.max(1, math.round(durMs * 0.001 * fps).toInt)
 
-                            case _ =>
-                              canvas.manualMode = false
-                              toggle.enabled    = true
-                        }
+                        def invoke(frameIdx: Int): Unit =
+                          if (frameIdx < numFrames) {
+                            val outTime = (frameIdx / fps) * 1000
+                            val frameI10 = frames.indexWhere { f =>
+                              val inTime = (f.time - frameFirst.time).toDouble
+                              inTime > outTime
+                            }
+                            val frameI1 = if (frameI10 >= 0) frameI10 else numFrames - 1
+                            val frameI2 = frameI1 - 1
+                            val frame1  = frames(frameI1)
+                            val frame2  = frames(frameI2)
+                            val frameT1 = (frame1.time - frameFirst.time).toDouble
+                            val frameT2 = (frame2.time - frameFirst.time).toDouble
+                            val trunkX  = outTime.linLin(frameT1, frameT2, frame1.trunkX, frame2.trunkX)
+                            val trunkY  = outTime.linLin(frameT1, frameT2, frame1.trunkY, frame2.trunkY)
+                            vis.setTrunkTargetPos(trunkX, trunkY)
+                            canvas.manualTime = outTime
+                            canvas.requestAnimationFrame { (g2, time) =>
+                              vis.paint(g2, time)
+                              val fOut = dirOut / f"frame-${frameIdx + 1}%04d.png"
+                              canvas.saveImage(fOut)
+                              invoke(frameIdx = frameIdx + 1)
+                            }
+                            canvas.peer.repaint()
 
-                        invoke(frames, frameIdx = 0)
+                          } else {
+                            println(s"Wrote $frameIdx out of ${frames.size} frames.")
+                            canvas.manualMode = false
+                            toggle.enabled    = true
+                          }
+
+                        invoke(frameIdx = 0)
                       }
+
+                    case _ => println("Recording is empty!")
                   }
                 }
             }
@@ -131,6 +151,8 @@ object Infibrillae {
                   Visual(server, canvas).onComplete {
                     case Success(v) =>
                       println("Visual ready.")
+                      val Palabra(txt, txtX, txtY) = palabras.head
+                      v.setText(txt, txtX, txtY)
                       visualOpt = Some(v)
 
                     case Failure(ex) =>
