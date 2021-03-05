@@ -18,10 +18,12 @@ import de.sciss.asyncfile.AsyncFile
 import de.sciss.audiofile.AudioFile
 import de.sciss.log.Level
 import de.sciss.lucre.synth.Executor
-import de.sciss.proc.{Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
+import de.sciss.proc.LoadWorkspace.T
+import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 import de.sciss.synth.{Server => SServer}
 import de.sciss.{osc, synth}
 import org.scalajs.dom
+import org.scalajs.dom.html
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -63,7 +65,7 @@ object Infibrillae {
     }
   }
 
-  private var visualOpt = Option.empty[Visual]
+  private var visualOpt = Option.empty[Visual[WebGraphics2D]]
 
   @JSExportTopLevel("setComposite")
   def setComposite(code: String): Unit = {
@@ -73,6 +75,11 @@ object Infibrillae {
   @JSExportTopLevel("setTextColor")
   def setTextColor(code: String): Unit = {
     visualOpt.foreach(_.setTextColor(code))
+  }
+
+  @JSExportTopLevel("setText")
+  def setText(s: String, x: Double, y: Double): Unit = {
+    visualOpt.foreach(_.setText(s, x, y))
   }
 
   @JSExportTopLevel("dumpOSC")
@@ -126,16 +133,26 @@ object Infibrillae {
     import Executor.executionContext
 
     fut.onComplete {
-      case Success((universe, view)) =>
+      case Success((universe: Universe[T], view)) =>
         universeOpt = Some(universe)
         /*val root: RootNode =*/ render(container, view.component)
-        Visual().onComplete {
-          case Success(v) =>
-            println("Visual ready.")
-            visualOpt = Some(v)
+        val canvasPeer  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
+        val canvas      = new WebCanvas(canvasPeer)
+        universe.cursor.step { implicit tx =>
+          universe.auralSystem.reactNow { implicit tx => {
+            case AuralSystem.Running(server) =>
+              tx.afterCommit {
+                Visual(server, canvas).onComplete {
+                  case Success(v) =>
+                    println("Visual ready.")
+                    visualOpt = Some(v)
 
-          case Failure(ex) =>
-            ex.printStackTrace()
+                  case Failure(ex) =>
+                    ex.printStackTrace()
+                }
+              }
+            case _ =>
+          }}
         }
 
       case Failure(ex) =>
