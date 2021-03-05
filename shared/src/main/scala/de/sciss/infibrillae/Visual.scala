@@ -35,9 +35,37 @@ object Visual extends VisualPlatform {
       new Visual(img1, img2, server, canvas)
     }
   }
+
+
+  private var _recording = false
+
+  def recording: Boolean = _recording
+
+  def recording_=(value: Boolean): Unit = {
+    _recording = value
+    if (value) {
+      recFramesB.clear()
+//      recTimeStart = System.currentTimeMillis()
+    }
+  }
+
+  final class RecFrame(val time: Long, val trunkX: Double, val trunkY: Double)
+
+//  private var recTimeStart  = 0L
+  private val recFramesB    = Vector.newBuilder[RecFrame]
+
+  def recFrames: Vector[RecFrame] = {
+    val res = recFramesB.result()
+    recFramesB.clear()
+    res
+  }
+
+  def rec(trunkX: Double, trunkY: Double): Unit =
+    if (recording) {
+      recFramesB += new RecFrame(time = System.currentTimeMillis(), trunkX = trunkX, trunkY = trunkY)
+    }
 }
-class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server,
-                                        canvas: Canvas[Ctx]) {
+class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx]) {
   private val canvasWH  = canvas.width  /2
   private val canvasHH  = canvas.height /2
   private val trunkMinX = canvasWH
@@ -71,9 +99,19 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     repaint()
   }
 
-  def setTrunkXY(x: Double, y: Double): Unit = {
+  def setTrunkPos(x: Double, y: Double): Unit = {
+    trunkX = x
+    trunkY = y
+  }
+
+  def setTrunkTargetPos(x: Double, y: Double): Unit = {
     trunkTgtX = x
     trunkTgtY = y
+    Visual.rec(trunkX, trunkY)
+  }
+
+  def setAnimTime(t: Double): Unit = {
+    lastAnimTime = t
   }
 
   private var sentIdx = 0.0
@@ -106,6 +144,12 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 
   // animTime is in milliseconds
   def repaint(ctx: Ctx, animTime: Double): Unit = {
+    paint(ctx, animTime)
+    sendTrunkXY()
+    repaint()
+  }
+
+  def paint(ctx: Ctx, animTime: Double): Unit = {
     val dt = min(100.0, animTime - lastAnimTime)
     lastAnimTime = animTime
 
@@ -113,7 +157,6 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     val wS  = 1.0 - wT
     trunkX  = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
     trunkY  = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
-    sendTrunkXY()
 
     //  ctx.fillStyle = "green"
     //  ctx.fillRect(10, 10, 150, 100)
@@ -127,8 +170,6 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     ctx.composite = composite //  "color-burn"
 //    ctx.drawImage(img2, 0.0, 0.0)
     img2.draw(ctx, 0.0, 0.0)
-
-    repaint()
   }
 
   private var dragActive  = false
@@ -156,7 +197,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
         val dy = my - canvasHH
         val txT = (trunkX + dx).clip(trunkMinX, trunkMaxX)
         val tyT = (trunkY + dy).clip(trunkMinY, trunkMaxY)
-        setTrunkXY(txT, tyT)
+        setTrunkTargetPos(txT, tyT)
       }
     }
   })

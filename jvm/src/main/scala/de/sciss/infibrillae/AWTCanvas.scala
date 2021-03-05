@@ -1,18 +1,54 @@
+/*
+ *  AWTCanvas.scala
+ *  (in|fibrillae)
+ *
+ *  Copyright (c) 2020-2021 Hanns Holger Rutz. All rights reserved.
+ *
+ *  This software is published under the GNU Affero General Public License v3+
+ *
+ *
+ *  For further information, please contact Hanns Holger Rutz at
+ *  contact@sciss.de
+ */
+
 package de.sciss.infibrillae
+
+import de.sciss.file._
 
 import java.awt.event.MouseAdapter
 import java.awt.image.BufferedImage
 import java.awt.{Graphics, RenderingHints, event}
+import javax.imageio.ImageIO
 import javax.swing.{JComponent, Timer}
 
 class AWTCanvas extends Canvas[AWTGraphics2D] {
   private var animFunArr    = new Array[(AWTGraphics2D, Double) => Unit](8)
   private var animFunNum    = 0
   private var animStartTime = 0L
+  private var _manualMode   = false
+
+  var manualTime = 0.0
+
+  def manualMode: Boolean = _manualMode
+  def manualMode_=(value: Boolean): Unit = if (_manualMode != value) {
+    _manualMode = value
+    if (value) {
+      timer.stop()
+    } else {
+      startTimer()
+    }
+  }
+
+  def saveImage(f: File): Unit = {
+    val fmt = f.extL
+    ImageIO.write(_peer.image, fmt, f)
+  }
 
   private object _peer extends JComponent {
     private var buf: BufferedImage = null
     private var g2w: AWTGraphics2D = null
+
+    def image: BufferedImage = buf
 
 //    setDoubleBuffered(true)
 
@@ -27,8 +63,7 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
 
 //      val g2  = g.asInstanceOf[java.awt.Graphics2D]
 //      val g2w = new AWTGraphics2D(g2)
-      val now = System.currentTimeMillis()
-      val dt  = now - animStartTime
+      val dt  = if (_manualMode) manualTime else (System.currentTimeMillis() - animStartTime).toDouble
       val arr = animFunArr
       var i = 0
       val n = animFunNum
@@ -36,7 +71,7 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
       while (i < n) {
         val f = arr(i)
         arr(i) = null
-        f(g2w, dt.toDouble)
+        f(g2w, dt)
         i += 1
       }
       g.drawImage(buf, 0, 0, this)
@@ -66,10 +101,14 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
     }
     animFunArr(animFunNum) = fun
     animFunNum += 1
-    if (!timer.isRunning) {
-      animStartTime = System.currentTimeMillis()
-      timer.restart()
+    if (!timer.isRunning && !_manualMode) {
+      startTimer()
     }
+  }
+
+  private def startTimer(): Unit = {
+    animStartTime = System.currentTimeMillis()
+    timer.restart()
   }
 
   override def addMouseListener(ml: MouseListener): Unit = {
