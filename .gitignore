@@ -7,6 +7,6 @@ project/boot/
 .history
 /.bsp/
 lib/main*
-workspace.mllt/*.csv
+*.mllt/*.csv
 /*.bin
 assets/*.bin

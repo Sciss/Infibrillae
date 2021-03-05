@@ -129,8 +129,13 @@ object Infibrillae {
       case Success((universe, view)) =>
         universeOpt = Some(universe)
         /*val root: RootNode =*/ render(container, view.component)
-        Visual().foreach { v =>
-          visualOpt = Some(v)
+        Visual().onComplete {
+          case Success(v) =>
+            println("Visual ready.")
+            visualOpt = Some(v)
+
+          case Failure(ex) =>
+            ex.printStackTrace()
         }
 
       case Failure(ex) =>

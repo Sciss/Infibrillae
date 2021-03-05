@@ -15,11 +15,15 @@ package de.sciss.infibrillae
 
 import de.sciss.lucre.synth.Executor.executionContext
 import de.sciss.numbers.Implicits._
+import de.sciss.osc
+import de.sciss.synth.message
 import org.scalajs.dom
 import org.scalajs.dom.{MouseEvent, html}
 import org.scalajs.dom.raw.{CanvasRenderingContext2D, Event}
 
 import scala.concurrent.{Future, Promise}
+import scala.math.Pi
+import scala.util.control.NonFatal
 
 object Visual {
   def loadImage(name: String): Future[html.Image] = {
@@ -41,11 +45,13 @@ object Visual {
       img1 <- loadImage("trunk11crop.jpg")
       img2 <- loadImage("fibre4298crop1.jpg")
     } yield {
-      new Visual(img1, img2)
+      val t = osc.Browser.Transmitter(osc.Browser.Address(57110))
+//      t.connect()
+      new Visual(img1, img2, t)
     }
   }
 }
-class Visual private(img1: html.Image, img2: html.Image) {
+class Visual private(img1: html.Image, img2: html.Image, trns: osc.Browser.Transmitter.Directed) {
   private val canvas    = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
   private val ctx       = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
   private val trunkMinX = canvas.width  - img1.width
@@ -65,14 +71,33 @@ class Visual private(img1: html.Image, img2: html.Image) {
     repaint()
   }
 
-  println(s"Visual it. 7. img1.width ${img1.width}, canvas.width ${canvas.width} trunkMinX $trunkMinX, trunkMinY $trunkMinY")
+  def setTrunkXY(x: Double, y: Double): Unit = {
+    trunkX  = x
+    trunkY  = y
+    val xr  = x.linLin(trunkMinX, 0.0, -1, 1)
+    val yr  = y.linLin(trunkMinY, 0.0, -1, 1)
+    val a   = math.atan2(yr, xr)
+    val idx = a.linLin(-Pi, +Pi, 0.0, 4.0)
+    try {
+      if (!trns.isConnected) {
+        trns.connect()
+      }
+      trns ! message.ControlBusSet(10 -> idx)
+    } catch {
+      case NonFatal(_) =>
+    }
+
+    repaint()   // requestAnimationFrame?
+  }
+
+  println(s"Visual it. 8. img1.width ${img1.width}, canvas.width ${canvas.width} trunkMinX $trunkMinX, trunkMinY $trunkMinY")
 
   def repaint(): Unit = {
     //  ctx.fillStyle = "green"
     //  ctx.fillRect(10, 10, 150, 100)
     ctx.globalCompositeOperation = "source-over"
-    val tx = if (dragActive) (trunkX + dragEndX - dragStartX).clip(trunkMinX, 0.0) else trunkX
-    val ty = if (dragActive) (trunkY + dragEndY - dragStartY).clip(trunkMinY, 0.0) else trunkY
+    val tx = /*if (dragActive) (trunkX + dragEndX - dragStartX).clip(trunkMinX, 0.0) else*/ trunkX
+    val ty = /*if (dragActive) (trunkY + dragEndY - dragStartY).clip(trunkMinY, 0.0) else*/ trunkY
     ctx.drawImage(img1, tx, ty)
     ctx.fillStyle = textColor // "#CCC"
     ctx.fillText("in|fibrillae", 100.0, 100.0)
@@ -80,6 +105,8 @@ class Visual private(img1: html.Image, img2: html.Image) {
     ctx.drawImage(img2, 0.0, 0.0)
   }
 
+  private var dragTrunkX  = 0.0
+  private var dragTrunkY  = 0.0
   private var dragStartX  = 0.0
   private var dragStartY  = 0.0
   private var dragEndX    = 0.0
@@ -93,6 +120,8 @@ class Visual private(img1: html.Image, img2: html.Image) {
     println(s"down $mx, $my") // , ${e.pageX}, ${e.pageY}")
     dragStartX  = mx
     dragStartY  = my
+    dragTrunkX  = trunkX
+    dragTrunkY  = trunkY
     dragActive  = true
     e.preventDefault()
   })
@@ -105,15 +134,14 @@ class Visual private(img1: html.Image, img2: html.Image) {
       e.preventDefault()
       dragEndX = mx
       dragEndY = my
-      repaint()
+      val tx   = (dragTrunkX + dragEndX - dragStartX).clip(trunkMinX, 0.0)
+      val ty   = (dragTrunkY + dragEndY - dragStartY).clip(trunkMinY, 0.0)
+      setTrunkXY(tx, ty)
     }
   })
   canvas.ownerDocument.addEventListener[MouseEvent]("mouseup", { e =>
     // println("up")
     if (dragActive) {
-      trunkX = (trunkX + dragEndX - dragStartX).clip(trunkMinX, 0.0)
-      trunkY = (trunkY + dragEndY - dragStartY).clip(trunkMinY, 0.0)
-      println(s"trunkX $trunkX, trunkY $trunkY")
       dragActive = false
       e.preventDefault()
     }
