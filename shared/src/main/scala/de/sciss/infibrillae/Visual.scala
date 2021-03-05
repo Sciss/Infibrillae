@@ -161,7 +161,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     }
   })
 
-  canvas.requestAnimationFrame((ctx, _) => ctx.font = Font("VoltaireRegular", 36))
+  canvas.requestAnimationFrame((ctx, _) => ctx.font = Font("Voltaire", 36))
 
 //  ctx.font = "36px VoltaireRegular"
 

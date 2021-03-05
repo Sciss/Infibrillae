@@ -7,6 +7,7 @@ lazy val deps = new {
     val audioFile       = "2.3.3"
     val dom             = "1.1.0"
 //    val fscape          = "3.6.0-SNAPSHOT"
+    val jhlabs          = "2.0.235"
     val laminar         = "0.11.0"
     val lucre           = "4.4.3"
     val lucreSwing      = "2.6.2"
@@ -37,6 +38,11 @@ lazy val root = crossProject(platforms: _*).in(file("."))
       "de.sciss"          %%% "lucre-swing"           % deps.main.lucreSwing,
       "de.sciss"          %%% "soundprocesses-core"   % deps.main.soundProcesses,
       "de.sciss"          %%% "soundprocesses-views"  % deps.main.soundProcesses,
+    ),
+  )
+  .jvmSettings(
+    libraryDependencies ++= Seq(
+      "com.jhlabs" % "filters" % deps.main.jhlabs
     ),
   )
   .jsSettings(
