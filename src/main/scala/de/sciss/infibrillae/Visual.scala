@@ -142,12 +142,13 @@ class Visual private(img1: html.Image, img2: html.Image, trns: osc.Browser.Trans
 //  private var dragStartY  = 0.0
 //  private var dragEndX    = 0.0
 //  private var dragEndY    = 0.0
-//  private var dragActive  = false
+
+  private var dragActive  = false
 
   canvas.addEventListener[MouseEvent]("mousemove", { e =>
     // println(s"move") //  ${e.clientX}, ${e.clientY}, ${e.pageX}, ${e.pageY}")
-//    if (dragActive) {
-      e.preventDefault()
+    e.preventDefault()
+    if (!dragActive) {
       val b   = canvas.getBoundingClientRect
       val mx  = e.clientX - b.left
       val my  = e.clientY - b.top
@@ -161,11 +162,11 @@ class Visual private(img1: html.Image, img2: html.Image, trns: osc.Browser.Trans
 //      val ty   = (tyC * 0.95 + tyT * 0.05 - hH).clip(0.0, trunkMaxY)
 //      setTrunkXY(tx, ty)
       setTrunkXY(txT, tyT)
-//    }
+    }
   })
 
-//  canvas.addEventListener[MouseEvent]("mousedown", { e =>
-//    val b = canvas.getBoundingClientRect
+  canvas.addEventListener[MouseEvent]("mousedown", { e =>
+    val b = canvas.getBoundingClientRect
 //    val mx = e.clientX - b.left
 //    val my = e.clientY - b.top
 //    println(s"down $mx, $my") // , ${e.pageX}, ${e.pageY}")
@@ -173,9 +174,10 @@ class Visual private(img1: html.Image, img2: html.Image, trns: osc.Browser.Trans
 //    dragStartY  = my
 //    dragTrunkX  = trunkX
 //    dragTrunkY  = trunkY
-//    dragActive  = true
-//    e.preventDefault()
+    dragActive  = true
+    e.preventDefault()
 //  })
+
 //  canvas.addEventListener[MouseEvent]("mousemove", { e =>
 //    // println(s"move") //  ${e.clientX}, ${e.clientY}, ${e.pageX}, ${e.pageY}")
 //    if (dragActive) {
@@ -190,13 +192,13 @@ class Visual private(img1: html.Image, img2: html.Image, trns: osc.Browser.Trans
 //      setTrunkXY(tx, ty)
 //    }
 //  })
-//  canvas.ownerDocument.addEventListener[MouseEvent]("mouseup", { e =>
-//    // println("up")
-//    if (dragActive) {
-//      dragActive = false
-//      e.preventDefault()
-//    }
-//  })
+  canvas.ownerDocument.addEventListener[MouseEvent]("mouseup", { e =>
+    // println("up")
+    if (dragActive) {
+      dragActive = false
+      e.preventDefault()
+    }
+  })
 
   ctx.font = "36px VoltaireRegular"
 
