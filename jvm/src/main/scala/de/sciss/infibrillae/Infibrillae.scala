@@ -14,7 +14,6 @@
 package de.sciss.infibrillae
 
 import de.sciss.file._
-import de.sciss.infibrillae.Visual.RecFrame
 import de.sciss.lucre.synth.Executor
 import de.sciss.numbers.Implicits.doubleNumberWrapper
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
@@ -34,6 +33,8 @@ object Infibrillae {
   type S = Durable
   type T = Durable.Txn
 
+  val SPACE_IDX = 2
+
   private var universeOpt = Option.empty[Universe[T]]
 
   private var visualOpt = Option.empty[Visual[AWTGraphics2D]]
@@ -42,8 +43,18 @@ object Infibrillae {
 
   val palabras = Seq(
     Palabra("phantom limb", 104.0, 100.0),
-    Palabra("fata morgana", 100.0, 100.0),
-    Palabra( "nystagmus"  , 100.0, 100.0),
+    Palabra("fata morgana", 104.0, 100.0),
+    Palabra("nystagmus"   , 120.0, 100.0),
+  )
+
+  val speeds = Seq(
+    0.005,
+    0.002,
+    0.006,
+  )
+
+  val trunkIds = Seq(
+    11, 13, 15
   )
 
   def run(): Unit = {
@@ -51,7 +62,7 @@ object Infibrillae {
     SoundProcesses.init()
     Widget        .init()
 
-    val fut = LoadWorkspace()
+    val fut = LoadWorkspace(s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
 
     import Executor.executionContext
 
@@ -78,15 +89,16 @@ object Infibrillae {
                       val fmt = new SimpleDateFormat("HH'h'mm'm'ss.SSS's'", Locale.US)
                       println(s"Record Start: ${fmt.format(new Date(frameFirst.time))}")
                       println(s"Record Stop : ${fmt.format(new Date(frameLast.time))}")
-                      canvas.manualMode = true
                       visualOpt.foreach { vis =>
                         val dirOut = userHome / "Documents" / "infib_rec"
                         dirOut.mkdirs()
                         vis.setTrunkPos(frameFirst.trunkX, frameFirst.trunkY)
                         vis.setAnimTime(-0.1)
-                        toggle.enabled = false
-                        val fps = 25.0
+                        toggle.enabled    = false
+                        canvas.manualMode = true
+                        vis.mouseEnabled  = false
 
+                        val fps       = 25.0
                         val durMs     = frameLast.time - frameFirst.time
                         val numFrames = math.max(1, math.round(durMs * 0.001 * fps).toInt)
 
@@ -109,7 +121,7 @@ object Infibrillae {
                             canvas.manualTime = outTime
                             canvas.requestAnimationFrame { (g2, time) =>
                               vis.paint(g2, time)
-                              val fOut = dirOut / f"frame-${frameIdx + 1}%04d.png"
+                              val fOut = dirOut / f"frame-${frameIdx + 1}%05d.png"
                               canvas.saveImage(fOut)
                               invoke(frameIdx = frameIdx + 1)
                             }
@@ -119,6 +131,7 @@ object Infibrillae {
                             println(s"Wrote $frameIdx out of ${frames.size} frames.")
                             canvas.manualMode = false
                             toggle.enabled    = true
+                            vis.mouseEnabled  = true
                           }
 
                         invoke(frameIdx = 0)
@@ -148,10 +161,10 @@ object Infibrillae {
             universe.auralSystem.reactNow { implicit tx => {
               case AuralSystem.Running(server) =>
                 tx.afterCommit {
-                  Visual(server, canvas).onComplete {
+                  Visual(server, canvas, idx = SPACE_IDX, speed = speeds(SPACE_IDX)).onComplete {
                     case Success(v) =>
                       println("Visual ready.")
-                      val Palabra(txt, txtX, txtY) = palabras.head
+                      val Palabra(txt, txtX, txtY) = palabras(SPACE_IDX)
                       v.setText(txt, txtX, txtY)
                       visualOpt = Some(v)
 

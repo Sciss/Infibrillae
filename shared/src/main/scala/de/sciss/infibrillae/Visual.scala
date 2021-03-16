@@ -23,16 +23,23 @@ import scala.math.{Pi, min}
 import scala.util.control.NonFatal
 
 object Visual extends VisualPlatform {
-  def apply(server: Server, canvas: Canvas[Ctx]): Future[Visual[Ctx]] = {
+  val seq = Seq(
+    ("trunk11crop.jpg", "fibre4298crop1.jpg"),
+    ("trunk13.jpg"    , "fibre4144crop1.jpg"),
+    ("trunk15.jpg"    , "fibre4162crop1.jpg"),
+  )
+
+  def apply(server: Server, canvas: Canvas[Ctx], idx: Int, speed: Double): Future[Visual[Ctx]] = {
+    val (nameTrunk, nameFibre) = seq(idx)
     for {
-      img1 <- loadImage("trunk11crop.jpg")
-      img2 <- loadImage("fibre4298crop1.jpg")
+      img1 <- loadImage(nameTrunk)
+      img2 <- loadImage(nameFibre)
     } yield {
 //      val t = osc.Browser.Transmitter(osc.Browser.Address(57110))
 //      t.connect()
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-      new Visual(img1, img2, server, canvas)
+      new Visual(img1, img2, server, canvas, speed = speed)
     }
   }
 
@@ -65,7 +72,8 @@ object Visual extends VisualPlatform {
       recFramesB += new RecFrame(time = System.currentTimeMillis(), trunkX = trunkX, trunkY = trunkY)
     }
 }
-class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx]) {
+class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx],
+                                        speed: Double) {
   private val canvasWH  = canvas.width  /2
   private val canvasHH  = canvas.height /2
   private val trunkMinX = canvasWH
@@ -153,7 +161,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     val dt = min(100.0, animTime - lastAnimTime)
     lastAnimTime = animTime
 
-    val wT  = dt * 0.005 // 0.01
+    val wT  = dt * speed // 0.01
     val wS  = 1.0 - wT
     trunkX  = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
     trunkY  = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
@@ -174,6 +182,8 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 
   private var dragActive  = false
 
+  var mouseEnabled = true
+
   canvas.addMouseListener(new MouseListener {
     override def mouseDown(e: MouseEvent): Unit = {
       dragActive = true
@@ -189,7 +199,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 
     override def mouseMove(e: MouseEvent): Unit = {
       e.preventDefault()
-      if (!dragActive) {
+      if (!dragActive && mouseEnabled) {
 //        val b = canvas.getBoundingClientRect
         val mx = e.x // e.clientX - b.left
         val my = e.y // e.clientY - b.top
