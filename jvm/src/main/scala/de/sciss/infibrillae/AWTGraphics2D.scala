@@ -14,6 +14,9 @@
 package de.sciss.infibrillae
 
 import com.jhlabs.composite.ColorBurnComposite
+import de.sciss.infibrillae.geom.{AffineTransform, PathIterator, Shape}
+
+import java.awt.Rectangle
 
 class AWTGraphics2D(_peer: java.awt.Graphics2D) extends Graphics2D {
   private var _composite: Composite = Composite.SourceOver
@@ -27,6 +30,9 @@ class AWTGraphics2D(_peer: java.awt.Graphics2D) extends Graphics2D {
     }
     _peer.setComposite(c)
   }
+
+  override def translate(tx: Double, ty: Double): Unit =
+    _peer.translate(tx, ty)
 
   private var _font: Font = Font("SansSerif", 12)
 
@@ -60,4 +66,64 @@ class AWTGraphics2D(_peer: java.awt.Graphics2D) extends Graphics2D {
 
   override def fillText(s: String, x: Double, y: Double): Unit =
     _peer.drawString(s, x.toFloat, y.toFloat)
+
+  private final class WrapPathIterator(peer: PathIterator) extends java.awt.geom.PathIterator {
+    override def getWindingRule: Int = peer.getWindingRule
+
+    override def isDone: Boolean = peer.isDone
+
+    override def next(): Unit = peer.next()
+
+    override def currentSegment(coords: Array[Float ]): Int = peer.currentSegment(coords)
+    override def currentSegment(coords: Array[Double]): Int = peer.currentSegment(coords)
+  }
+
+  private object WrapShape extends java.awt.Shape {
+    var current: Shape = null
+    private val atPeer    = new AffineTransform()
+    private val atMatrix  = new Array[Double](6)
+
+    override def getBounds: Rectangle = ???
+
+    override def getBounds2D: java.awt.geom.Rectangle2D = ???
+
+    override def contains(x: Double, y: Double): Boolean =
+      current.contains(x, y)
+
+    override def contains(p: java.awt.geom.Point2D): Boolean = ???
+
+    override def intersects(x: Double, y: Double, w: Double, h: Double): Boolean =
+      current.intersects(x, y, w, h)
+
+    override def intersects(r: java.awt.geom.Rectangle2D): Boolean = ???
+
+    override def contains(x: Double, y: Double, w: Double, h: Double): Boolean =
+      current.contains(x, y, w, h)
+
+    override def contains(r: java.awt.geom.Rectangle2D): Boolean = ???
+
+    private def wrapTransform(at: java.awt.geom.AffineTransform): AffineTransform =
+      if (at == null) null else {
+        val m = atMatrix
+        at.getMatrix(m)
+        val res = atPeer
+        res.setTransform(m(0),m(1),m(2),m(3),m(4),m(5))
+        res
+      }
+
+    override def getPathIterator(at: java.awt.geom.AffineTransform): java.awt.geom.PathIterator = {
+      val atP = wrapTransform(at)
+      new WrapPathIterator(current.getPathIterator(atP))
+    }
+
+    override def getPathIterator(at: java.awt.geom.AffineTransform, flatness: Double): java.awt.geom.PathIterator = {
+      val atP = wrapTransform(at)
+      new WrapPathIterator(current.getPathIterator(atP, flatness))
+    }
+  }
+
+  override def fillShape(s: Shape): Unit = {
+    WrapShape.current = s
+    _peer.fill(WrapShape)
+  }
 }

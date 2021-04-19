@@ -38,6 +38,8 @@ object Infibrillae {
   type S = Durable
   type T = Durable.Txn
 
+  val SPACE_IDX = 0 // 2
+
   def runGUI(): Unit = {
     println("Infibrillae initialized.")
     documentEvents.onDomContentLoaded.foreach { _ =>
@@ -106,6 +108,10 @@ object Infibrillae {
   def sendOSC(cmd: String, args: js.Any*): Unit =
     SServer.default.!(osc.Message(cmd, args: _*))
 
+  private val trunkIds = Seq(
+    11, 13, 15
+  )
+
   @JSExport
   def run(): Unit = {
 
@@ -128,7 +134,7 @@ object Infibrillae {
     val container: dom.Element = dom.document.getElementById("piece")
 
 //    val fut = DirectWorkspace()
-    val fut = LoadWorkspace()
+    val fut = LoadWorkspace(s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
 
     import Executor.executionContext
 
@@ -142,7 +148,7 @@ object Infibrillae {
           universe.auralSystem.reactNow { implicit tx => {
             case AuralSystem.Running(server) =>
               tx.afterCommit {
-                Visual(server, canvas).onComplete {
+                Visual(server, canvas, idx = SPACE_IDX).onComplete {
                   case Success(v) =>
                     println("Visual ready.")
                     visualOpt = Some(v)

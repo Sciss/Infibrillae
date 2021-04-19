@@ -13,6 +13,8 @@
 
 package de.sciss.infibrillae
 
+import de.sciss.infibrillae.geom.Shape
+
 trait Graphics2D {
   var composite: Composite
 
@@ -21,4 +23,8 @@ trait Graphics2D {
   var fillStyle: Color
 
   def fillText(s: String, x: Double, y: Double): Unit
+
+  def fillShape(s: Shape): Unit
+
+  def translate(tx: Double, ty: Double): Unit
 }

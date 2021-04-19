@@ -1,5 +1,5 @@
 #Mellite Workspace Meta-Info
-#Thu Mar 04 23:51:40 CET 2021
-soundprocesses-version=4.7.2
+#Sun Mar 28 22:19:10 CEST 2021
+soundprocesses-version=4.7.3-SNAPSHOT
 type=ephemeral
-mellite-version=3.4.0
+mellite-version=3.4.1-SNAPSHOT

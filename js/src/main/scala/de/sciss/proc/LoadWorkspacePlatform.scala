@@ -23,6 +23,8 @@ import scala.scalajs.js.typedarray.{ArrayBuffer, Int8Array}
 import scala.util.control.NonFatal
 
 trait LoadWorkspacePlatform {
+  // TODO: use jszip - https://stuk.github.io/jszip/documentation/api_jszip/load_async.html
+  // and see if that significantly brings down download time
   def apply(url: String = "assets/workspace.mllt.bin"): Future[(Universe[T], View[T])] = {
     val oReq = new XMLHttpRequest
     oReq.open(method = "GET", url = url, async = true)

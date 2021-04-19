@@ -18,7 +18,8 @@ import de.sciss.lucre.synth.Executor
 import de.sciss.numbers.Implicits.doubleNumberWrapper
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 
-import java.awt.{BorderLayout, Cursor, EventQueue}
+import java.awt.image.BufferedImage
+import java.awt.{BorderLayout, Cursor, EventQueue, Point, Toolkit}
 import java.text.SimpleDateFormat
 import java.util.{Date, Locale}
 import javax.swing.{BorderFactory, JComponent, JFrame, JPanel, WindowConstants}
@@ -33,7 +34,7 @@ object Infibrillae {
   type S = Durable
   type T = Durable.Txn
 
-  val SPACE_IDX = 2
+  val SPACE_IDX = 0 // 2
 
   private var universeOpt = Option.empty[Universe[T]]
 
@@ -47,11 +48,11 @@ object Infibrillae {
     Palabra("nystagmus"   , 120.0, 100.0),
   )
 
-  val speeds = Seq(
-    0.005,
-    0.002,
-    0.006,
-  )
+//  val speeds = Seq(
+//    0.005,
+//    0.002,
+//    0.006,
+//  )
 
   val trunkIds = Seq(
     11, 13, 15
@@ -75,7 +76,9 @@ object Infibrillae {
           val canvasPeer: JComponent = canvas.peer
           canvasPeer.setPreferredSize(new Dimension(400, 400))
           canvasPeer.setOpaque(true)
-          canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
+//          canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
+          canvasPeer.setCursor(Toolkit.getDefaultToolkit.createCustomCursor(
+            new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB), new Point(0, 0), "hidden"))
           val ggRecord = new ToggleButton("Record") { toggle =>
             reactions += {
               case _: ButtonClicked =>
@@ -161,7 +164,7 @@ object Infibrillae {
             universe.auralSystem.reactNow { implicit tx => {
               case AuralSystem.Running(server) =>
                 tx.afterCommit {
-                  Visual(server, canvas, idx = SPACE_IDX, speed = speeds(SPACE_IDX)).onComplete {
+                  Visual(server, canvas, idx = SPACE_IDX).onComplete {
                     case Success(v) =>
                       println("Visual ready.")
                       val Palabra(txt, txtX, txtY) = palabras(SPACE_IDX)
