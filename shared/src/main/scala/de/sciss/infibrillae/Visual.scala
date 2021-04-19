@@ -154,11 +154,14 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private var trunkTgtX = trunkX
   private var trunkTgtY = trunkY
   private var composite: Composite = Composite.ColorBurn
-  private val polyColor: Color = Color.RGB4(0xF00)
+  private val polyColor1: Color = Color.RGB4(0xF00)
+  private val polyColor2: Color = Color.RGB4(0xFF0)
   private var textColor: Color = Color.RGB4(0xCCC)
   private var palabra   = "in|fibrillae"
   private var palabraX  = 100.0
   private var palabraY  = 100.0
+  private var mouseX    = -1
+  private var mouseY    = -1
 
   private val polyShape: Shape = {
     val res = new Path2D.Double
@@ -255,7 +258,9 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 //    ctx.drawImage(img1, -tx, -ty)
     img1.draw(ctx, -tx, -ty)
 
-    ctx.fillStyle = polyColor
+//    val inside    = polyShape.contains(mouseX + tx, mouseY + ty)
+    val inside    = polyShape.contains(mouseX + tx - 20, mouseY + ty - 20, 40.0, 40.0)
+    ctx.fillStyle = if (inside) polyColor2 else polyColor1
     ctx.translate(-tx, -ty)
     ctx.fillShape(polyShape)
     ctx.translate(tx, ty)
@@ -296,6 +301,8 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 //        val b = canvas.getBoundingClientRect
         val mx = e.x // e.clientX - b.left
         val my = e.y // e.clientY - b.top
+        mouseX = mx
+        mouseY = my
         val dx = mx - canvasWH
         val dy = my - canvasHH
         val txT = (trunkX + dx).clip(trunkMinX, trunkMaxX)
