@@ -31,7 +31,6 @@ package de.sciss.infibrillae.geom.impl
 
 import de.sciss.infibrillae.geom.{PathIterator, Rectangle2D}
 import de.sciss.infibrillae.geom.impl.Curve.{DECREASING, INCREASING, orderof}
-import sun.awt.geom.Crossings
 
 final class Order1(protected val x0: Double, protected val y0: Double,
                    protected val x1: Double, protected val y1: Double, direction: Int)

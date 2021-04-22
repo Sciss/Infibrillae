@@ -93,7 +93,7 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
     _peer.getToolkit.sync()
   })
 
-  override def requestAnimationFrame(fun: (AWTGraphics2D, Double) => Unit): Unit = {
+  override def repaint(fun: (AWTGraphics2D, Double) => Unit): Unit = {
     if (animFunArr.length == animFunNum) {
       val a = new Array[(AWTGraphics2D, Double) => Unit](animFunNum << 1)
       System.arraycopy(animFunArr, 0, a, 0, animFunNum)

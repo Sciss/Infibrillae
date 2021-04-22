@@ -27,7 +27,7 @@ class WebCanvas(_peer: html.Canvas) extends Canvas[WebGraphics2D] { self =>
     new WebGraphics2D(ctxPeer)
   }
 
-  override def requestAnimationFrame(fun: (WebGraphics2D, Double) => Unit): Unit =
+  override def repaint(fun: (WebGraphics2D, Double) => Unit): Unit =
     dom.window.requestAnimationFrame { timeStamp =>
       fun(ctx, timeStamp)
     }

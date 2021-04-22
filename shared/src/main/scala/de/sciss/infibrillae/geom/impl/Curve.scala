@@ -30,7 +30,6 @@ package de.sciss.infibrillae.geom.impl
  */
 
 import de.sciss.infibrillae.geom.{IllegalPathStateException, PathIterator, Rectangle2D, impl}
-import sun.awt.geom.Crossings
 
 import java.util
 

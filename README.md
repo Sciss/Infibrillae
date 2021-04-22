@@ -29,7 +29,7 @@ a git repository, the source `workspace.mllt` is included, and it must be export
 using Mellite 3.4.0-SNAPSHOT or newer (currently in development, you can build Mellite from source).
 Open `workspace.mllt` and choose the menu item _File_ > _Export Binary Workspace_.
 
-Then compile the launcher with `sbt -J-Xmx2G fastOptJS` or `sbt -J-Xmx2G fullOptJS`.
+Then compile the launcher with `sbt -J-Xmx2G fullOptJS`.
 
 After successful compilation, the [index.html](index.html) can be used to run the application.
 You must run a web server, such as

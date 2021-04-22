@@ -31,7 +31,6 @@ package de.sciss.infibrillae.geom.impl
 
 import de.sciss.infibrillae.geom.{PathIterator, Rectangle2D}
 import de.sciss.infibrillae.geom.impl.Curve.INCREASING
-import sun.awt.geom.Crossings
 
 final class Order0(x: Double, y: Double) extends Curve(INCREASING) {
   override def getOrder = 0

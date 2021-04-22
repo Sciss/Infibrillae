@@ -13,7 +13,7 @@
 
 package de.sciss.infibrillae
 
-import de.sciss.infibrillae.geom.{Path2D, Rectangle2D, Shape}
+import de.sciss.infibrillae.geom.{Area, Path2D, Rectangle2D, Shape}
 import de.sciss.lucre.synth.Executor.executionContext
 import de.sciss.lucre.synth.Server
 import de.sciss.numbers.Implicits._
@@ -25,6 +25,8 @@ import scala.math.{Pi, min}
 import scala.util.control.NonFatal
 
 object Visual extends VisualPlatform {
+  val font: Font = Font("Voltaire", 36)
+
   private val trunkNameSq: Seq[(String, String)] = Seq(
     ("trunk11crop.jpg", "fibre4298crop1.jpg"),
     ("trunk13.jpg"    , "fibre4144crop1.jpg"),
@@ -37,7 +39,7 @@ object Visual extends VisualPlatform {
     0.006,
   )
 
-  private val poemSq: Seq[Vec[String]] = Seq(
+  val poemSq: Seq[Vec[String]] = Seq(
     // penultimate is bridge to previous, ultimate is bridge to next
      Vector(
       "he", "strange", "creature", /*"light-skinned",*/ "tropics", "most", "others", "call",
@@ -62,6 +64,43 @@ object Visual extends VisualPlatform {
       "keloid", "how much", "work", "life", "conjunction", "absence", "something", "desired",
       "changes", "substance",
       "invisible", "skin",
+    ),
+  )
+
+  val poemBoxesSq: Seq[Vec[IRect2D]] = Seq(
+    Vector(
+      IRect2D(2,-28,30,29), IRect2D(1,-25,98,32), IRect2D(1,-25,106,26), IRect2D(1,-27,89,34),
+      IRect2D(2,-25,65,26), IRect2D(1,-28,83,29), IRect2D(1,-28,41,29), IRect2D(1,-29,51,36),
+      IRect2D(2,-28,87,29), IRect2D(1,-28,156,35), IRect2D(1,-28,68,29), IRect2D(1,-28,129,29),
+      IRect2D(2,-27,5,27), IRect2D(1,-27,95,28), IRect2D(1,-28,97,29), IRect2D(0,-19,33,21),
+      IRect2D(0,-28,93,30), IRect2D(1,-28,68,29), IRect2D(1,-28,83,35), IRect2D(1,-28,114,35),
+      IRect2D(1,-28,72,29), IRect2D(1,-28,131,35), IRect2D(2,-19,88,20), IRect2D(2,-28,66,30),
+      IRect2D(2,-27,136,28), IRect2D(1,-28,71,29), IRect2D(2,-28,93,35), IRect2D(1,-28,60,29),
+      IRect2D(2,-28,148,29), IRect2D(1,-28,125,29), IRect2D(0,-28,67,30), IRect2D(2,-19,103,21),
+      IRect2D(2,-25,143,32), IRect2D(1,-27,115,29), IRect2D(1,-28,42,29), IRect2D(1,-28,99,29),
+      IRect2D(1,-19,56,26), IRect2D(1,-28,116,29), IRect2D(1,-28,130,30), IRect2D(1,-28,103,35),
+      IRect2D(2,-28,178,35), IRect2D(2,-28,55,35)
+    ),
+    Vector(
+      IRect2D(1,-28,145,29), IRect2D(1,-25,171,32), IRect2D(1,-19,66,20), IRect2D(2,-27,170,34),
+      IRect2D(1,-28,127,35), IRect2D(1,-28,55,29), IRect2D(2,-28,63,29), IRect2D(2,-19,71,21),
+      IRect2D(1,-25,103,26), IRect2D(2,-27,52,28), IRect2D(1,-28,138,29), IRect2D(2,-28,187,35),
+      IRect2D(1,-27,148,28), IRect2D(1,-28,72,29), IRect2D(1,-28,79,35), IRect2D(2,-28,131,35),
+      IRect2D(2,-28,56,29), IRect2D(0,-20,75,27), IRect2D(1,-27,145,28), IRect2D(1,-27,111,34),
+      IRect2D(1,-25,146,26), IRect2D(1,-28,68,29), IRect2D(1,-29,174,36), IRect2D(1,-28,200,35),
+      IRect2D(1,-28,58,35), IRect2D(1,-29,199,30), IRect2D(2,-28,110,35), IRect2D(2,-28,146,29),
+      IRect2D(2,-28,128,35), IRect2D(2,-28,55,35), IRect2D(2,-28,110,30)
+    ),
+    Vector(
+      IRect2D(2,-27,129,34), IRect2D(1,-25,75,26), IRect2D(0,-28,119,30), IRect2D(2,-28,127,35),
+      IRect2D(1,-28,58,29), IRect2D(2,-28,79,29), IRect2D(1,-28,110,30), IRect2D(1,-28,122,35),
+      IRect2D(1,-28,71,29), IRect2D(2,-28,118,35), IRect2D(2,-28,57,29), IRect2D(2,-27,107,28),
+      IRect2D(2,-28,64,35), IRect2D(1,-25,117,26), IRect2D(1,-27,87,34), IRect2D(0,-19,101,21),
+      IRect2D(1,-28,169,35), IRect2D(2,-28,71,35), IRect2D(2,-25,51,32), IRect2D(1,-28,152,29),
+      IRect2D(1,-29,162,30), IRect2D(2,-28,78,29), IRect2D(2,-28,130,30), IRect2D(0,-28,63,30),
+      IRect2D(2,-29,39,30), IRect2D(1,-27,157,34), IRect2D(1,-28,104,29), IRect2D(1,-28,141,35),
+      IRect2D(1,-28,94,29), IRect2D(1,-28,107,35), IRect2D(1,-28,130,29), IRect2D(2,-28,110,30),
+      IRect2D(1,-28,52,29)
     ),
   )
 
@@ -97,9 +136,10 @@ object Visual extends VisualPlatform {
 
   def apply(server: Server, canvas: Canvas[Ctx], idx: Int): Future[Visual[Ctx]] = {
     val (nameTrunk, nameFibre) = trunkNameSq(idx)
-    val poem  = poemSq(idx)
-    val speed = speedSq(idx)
-    val poly  = polySq(idx)
+    val poem      = poemSq(idx)
+    val poemBoxes = poemBoxesSq(idx)
+    val speed     = speedSq(idx)
+    val poly      = polySq(idx)
     for {
       img1 <- loadImage(nameTrunk)
       img2 <- loadImage(nameFibre)
@@ -108,7 +148,7 @@ object Visual extends VisualPlatform {
 //      t.connect()
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-      new Visual(img1, img2, server, canvas, speed = speed, poem = poem, poly = poly)
+      new Visual(img1, img2, server, canvas, speed = speed, poem = poem, poemBoxes = poemBoxes, poly = poly)
     }
   }
 
@@ -142,9 +182,12 @@ object Visual extends VisualPlatform {
     }
 }
 class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx],
-                                        speed: Double, poem: Vec[String], poly: Vec[(Float, Float)]) {
-  private val canvasWH  = canvas.width  /2
-  private val canvasHH  = canvas.height /2
+                                        speed: Double, poem: Vec[String], poemBoxes: Vec[IRect2D],
+                                        poly: Vec[(Float, Float)]) {
+  private val canvasW   = canvas.width
+  private val canvasWH  = canvasW / 2
+  private val canvasH   = canvas.height
+  private val canvasHH  = canvasH / 2
   private val trunkMinX = canvasWH
   private val trunkMinY = canvasHH
   private val trunkMaxX = img1.width  - canvasWH
@@ -156,12 +199,14 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private var composite: Composite = Composite.ColorBurn
   private val polyColor1: Color = Color.RGB4(0xF00)
   private val polyColor2: Color = Color.RGB4(0xFF0)
-  private var textColor: Color = Color.RGB4(0xCCC)
+  private var textColor: Color  = Color.RGB4(0xCCC)
   private var palabra   = "in|fibrillae"
   private var palabraX  = 100.0
   private var palabraY  = 100.0
   private var mouseX    = -1
   private var mouseY    = -1
+
+  private var placed = Option.empty[(String, Double, Double)]
 
   private val polyShape: Shape = {
     val res = new Path2D.Double
@@ -230,7 +275,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 //  println(s"Visual it. 8. img1.width ${img1.width}, canvas.width ${canvas.width}")
 
   def repaint(): Unit =
-    canvas.requestAnimationFrame(repaint) // dom.window.requestAnimationFrame(repaint)
+    canvas.repaint(repaint) // dom.window.requestAnimationFrame(repaint)
 
   private var lastAnimTime = 0.0
 
@@ -259,19 +304,47 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     img1.draw(ctx, -tx, -ty)
 
 //    val inside    = polyShape.contains(mouseX + tx, mouseY + ty)
-    val inside    = polyShape.contains(mouseX + tx - 20, mouseY + ty - 20, 40.0, 40.0)
-    ctx.fillStyle = if (inside) polyColor2 else polyColor1
-    ctx.translate(-tx, -ty)
-    ctx.fillShape(polyShape)
-    ctx.translate(tx, ty)
 
-    ctx.fillStyle = textColor // "#CCC"
+//    val inside    = polyShape.contains(mouseX + tx - 20, mouseY + ty - 20, 40.0, 40.0)
+//    ctx.fillStyle = if (inside) polyColor2 else polyColor1
+//    ctx.translate(-tx, -ty)
+//    ctx.fillShape(polyShape)
+//    ctx.translate(tx, ty)
 
 //    ctx.fillText(palabra, palabraX, palabraY)
-    ctx.fillText("disappearing" , 120.0, 122.0)
-    ctx.fillText("vacuum"       , 110.0,  50.0)
-    ctx.fillText("something"    , 70.0, 350.0)
-    ctx.fillText("desired"      , 230.0, 280.0)
+
+    //    for (pi <- 0 until 4) {
+//      val sx = 120.0
+//      val sy = 50 + pi * 50
+//      ctx.fillStyle = polyColor2
+//      val ri = poemBoxes(pi)
+//      val r = new Rectangle2D.Double(ri.x + sx, ri.y + sy, ri.width, ri.height)
+//      ctx.fillShape(r)
+//      ctx.fillStyle = textColor
+//      ctx.fillText(poem(pi), sx, sy)
+//    }
+
+    if (placed.isEmpty) {
+      val a = new Area(polyShape)
+      a.intersect(new Area(new Rectangle2D.Double(tx, ty, canvasW, canvasH)))
+      val pi = util.Random.nextInt(poem.size)
+      val pb = poemBoxes(pi)
+      val rx = util.Random.nextInt(canvasW - pb.width ) + tx
+      val ry = util.Random.nextInt(canvasH - pb.height) + ty
+      if (a.contains(new Rectangle2D.Double(rx, ry, pb.width, pb.height))) {
+        placed = Some(poem(pi), rx - pb.x, ry - pb.y)
+      }
+    }
+
+    placed.foreach { case (s, sx, sy) =>
+      ctx.fillStyle = textColor
+      ctx.fillText(s, sx - tx, sy - ty)
+    }
+
+//    ctx.fillText("disappearing" , 120.0, 122.0)
+//    ctx.fillText("vacuum"       , 110.0,  50.0)
+//    ctx.fillText("something"    ,  70.0, 350.0)
+//    ctx.fillText("desired"      , 230.0, 280.0)
 
     ctx.composite = composite //  "color-burn"
 //    ctx.drawImage(img2, 0.0, 0.0)
@@ -312,7 +385,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     }
   })
 
-  canvas.requestAnimationFrame((ctx, _) => ctx.font = Font("Voltaire", 36))
+  canvas.repaint((ctx, _) => ctx.font = Visual.font)
 
 //  ctx.font = "36px VoltaireRegular"
 

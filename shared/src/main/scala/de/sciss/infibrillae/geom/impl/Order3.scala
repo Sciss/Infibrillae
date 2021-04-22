@@ -264,7 +264,7 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
     val a = ycoeff2 / ycoeff3
     val b = ycoeff1 / ycoeff3
     val c = (ycoeff0 - y) / ycoeff3
-    val roots = 0
+//    val roots = 0
     var Q = (a * a - 3.0 * b) / 9.0
     var R = (2.0 * a * a * a - 9.0 * a * b + 27.0 * c) / 54.0
     val R2 = R * R
@@ -374,7 +374,7 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
       y = YforT(_t)
       val tdiff = diffbits(_t, origt)
       val ydiff = diffbits(y, origy)
-      val yerr = diffbits(y, target)
+      val yerr  = diffbits(y, target)
       if (yerr > 0 || (verbose && tdiff > 0)) {
         System.out.println("target was y = " + target)
         System.out.println("original was y = " + origy + ", t = " + origt)
@@ -386,7 +386,8 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
         val ylow = YforT(tlow)
         val thi = next(_t)
         val yhi = YforT(thi)
-        if (Math.abs(target - ylow) < Math.abs(target - y) || Math.abs(target - yhi) < Math.abs(target - y)) System.out.println("adjacent y's = [" + ylow + ", " + yhi + "]")
+        if (Math.abs(target - ylow) < Math.abs(target - y) || Math.abs(target - yhi) < Math.abs(target - y))
+          System.out.println("adjacent y's = [" + ylow + ", " + yhi + "]")
       }
     }
     if (_t > 1) -1
@@ -400,7 +401,6 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
   }
 
   override def XforT(t: Double): Double = (((xcoeff3 * t) + xcoeff2) * t + xcoeff1) * t + xcoeff0
-
   override def YforT(t: Double): Double = (((ycoeff3 * t) + ycoeff2) * t + ycoeff1) * t + ycoeff0
 
   override def dXforT(t: Double, deriv: Int): Double = deriv match {
@@ -504,8 +504,7 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
       coords(3) = _cy1
       coords(4) = x1
       coords(5) = y1
-    }
-    else {
+    } else {
       coords(0) = cx1
       coords(1) = _cy1
       coords(2) = cx0

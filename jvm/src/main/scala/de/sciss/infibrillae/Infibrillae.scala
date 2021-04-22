@@ -122,7 +122,7 @@ object Infibrillae {
                             val trunkY  = outTime.linLin(frameT1, frameT2, frame1.trunkY, frame2.trunkY)
                             vis.setTrunkTargetPos(trunkX, trunkY)
                             canvas.manualTime = outTime
-                            canvas.requestAnimationFrame { (g2, time) =>
+                            canvas.repaint { (g2, time) =>
                               vis.paint(g2, time)
                               val fOut = dirOut / f"frame-${frameIdx + 1}%05d.png"
                               canvas.saveImage(fOut)
