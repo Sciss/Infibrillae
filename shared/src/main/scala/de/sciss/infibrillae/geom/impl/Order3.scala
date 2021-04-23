@@ -30,9 +30,8 @@ package de.sciss.infibrillae.geom.impl
  */
 
 import de.sciss.infibrillae.geom.impl.Curve.{DECREASING, INCREASING, diffBits, next, prev, round}
-import de.sciss.infibrillae.geom.{PathIterator, Rectangle2D}
+import de.sciss.infibrillae.geom.{PathIterator, QuadCurve2D, Rectangle2D}
 
-import java.awt.geom.QuadCurve2D
 import scala.collection.mutable
 
 object Order3 {
