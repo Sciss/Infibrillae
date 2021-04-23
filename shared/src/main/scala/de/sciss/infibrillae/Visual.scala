@@ -148,7 +148,8 @@ object Visual extends VisualPlatform {
 //      t.connect()
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-      new Visual(img1, img2, server, canvas, speed = speed, poem = poem, poemBoxes = poemBoxes, poly = poly)
+      new Visual(img1, img2, server, canvas, speed = speed, poem = poem.toArray, poemBoxes = poemBoxes.toArray,
+        poly = poly.toArray)
     }
   }
 
@@ -182,8 +183,8 @@ object Visual extends VisualPlatform {
     }
 }
 class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx],
-                                        speed: Double, poem: Vec[String], poemBoxes: Vec[IRect2D],
-                                        poly: Vec[(Float, Float)]) {
+                                        speed: Double, poem: Array[String], poemBoxes: Array[IRect2D],
+                                        poly: Array[(Float, Float)]) {
   private val canvasW   = canvas.width
   private val canvasWH  = canvasW / 2
   private val canvasH   = canvas.height
@@ -206,14 +207,20 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private var mouseX    = -1
   private var mouseY    = -1
 
-  private var placed = Option.empty[(String, Double, Double)]
+  private var placedIdx = -1
+  private var placedX   = 0.0
+  private var placedY   = 0.0
+  private var placedVx  = 0.0
+  private var placedVy  = 0.0
 
   private val polyShape: Shape = {
     val res = new Path2D.Double
-    val ((x0, y0) +: tail) = poly
-    res.moveTo(x0, y0)
-    tail.foreach { case (x, y) =>
-      res.lineTo(x, y)
+    var i = 0
+    while (i < poly.length) {
+      val (x, y) = poly(i)
+      if (i == 0) res.moveTo(x, y)
+      else        res.lineTo(x, y)
+      i += 1
     }
     res.closePath()
     res
@@ -292,8 +299,12 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 
     val wT  = dt * speed // 0.01
     val wS  = 1.0 - wT
-    trunkX  = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
-    trunkY  = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
+    val trunkX1  = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
+    val trunkY1  = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
+    val dx  = trunkX1 - trunkX
+    val dy  = trunkY1 - trunkY
+    trunkX  = trunkX1
+    trunkY  = trunkY1
 
     //  ctx.fillStyle = "green"
     //  ctx.fillRect(10, 10, 150, 100)
@@ -324,21 +335,64 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 //      ctx.fillText(poem(pi), sx, sy)
 //    }
 
-    if (placed.isEmpty) {
+    if (placedIdx >= 0) {
+      val s   = poem(placedIdx)
+      val pb  = poemBoxes(placedIdx)
+      val pT  = dt * 0.005
+      val fr  = 1.0 - (dt * 0.001)
+      val pS  = 1.0 - pT
+      val vis = {
+        val px0 = placedX - tx + pb.x
+        (px0 < canvasW) && (px0 + pb.width > 0.0) && {
+          val py0 = placedY - ty + pb.y
+          (py0 < canvasH) && (py0 + pb.height > 0.0)
+        }
+      }
+      if (vis) {
+        val inside = {
+          val px0 = placedX - tx + pb.x
+          (px0 >= 0.0) && (px0 + pb.width <= canvasW) && {
+            val py0 = placedY - ty + pb.y
+            (py0 >= 0.0) && (py0 + pb.height <= canvasH)
+          }
+        }
+        if (inside) {
+          placedVx = (placedVx * pS + dx * pT) * fr
+          placedVy = (placedVy * pS + dy * pT) * fr
+        } else {
+          placedVx = placedVx * pS
+          placedVy = placedVy * pS
+        }
+        val sx   = placedX + placedVx
+        val sy   = placedY + placedVy
+        if (polyShape.contains(pb.x + sx, pb.y + sy, pb.width, pb.height)) {
+          placedX = sx
+          placedY = sy
+        } else {
+          placedVx = 0.0
+          placedVy = 0.0
+        }
+        ctx.fillStyle = textColor
+        ctx.fillText(s, placedX - tx, placedY - ty)
+      } else {
+        placedVx = placedVx * pS
+        placedVy = placedVy * pS
+      }
+
+    } else {
       val a = new Area(polyShape)
       a.intersect(new Area(new Rectangle2D.Double(tx, ty, canvasW, canvasH)))
-      val pi = util.Random.nextInt(poem.size)
+      val pi = util.Random.nextInt(poem.length)
       val pb = poemBoxes(pi)
       val rx = util.Random.nextInt(canvasW - pb.width ) + tx
       val ry = util.Random.nextInt(canvasH - pb.height) + ty
       if (a.contains(new Rectangle2D.Double(rx, ry, pb.width, pb.height))) {
-        placed = Some(poem(pi), rx - pb.x, ry - pb.y)
+        placedIdx = pi
+        placedX   = rx - pb.x
+        placedY   = ry - pb.y
+        placedVx  = 0.0
+        placedVy  = 0.0
       }
-    }
-
-    placed.foreach { case (s, sx, sy) =>
-      ctx.fillStyle = textColor
-      ctx.fillText(s, sx - tx, sy - ty)
     }
 
 //    ctx.fillText("disappearing" , 120.0, 122.0)

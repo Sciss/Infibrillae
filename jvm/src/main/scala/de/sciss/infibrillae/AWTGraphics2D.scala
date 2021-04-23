@@ -85,22 +85,28 @@ class AWTGraphics2D(_peer: java.awt.Graphics2D) extends Graphics2D {
 
     override def getBounds: Rectangle = ???
 
-    override def getBounds2D: java.awt.geom.Rectangle2D = ???
+    override def getBounds2D: java.awt.geom.Rectangle2D = {
+      val r = current.getBounds2D
+      new java.awt.geom.Rectangle2D.Double(r.getX, r.getY, r.getWidth, r.getHeight)
+    }
 
     override def contains(x: Double, y: Double): Boolean =
       current.contains(x, y)
 
-    override def contains(p: java.awt.geom.Point2D): Boolean = ???
+    override def contains(p: java.awt.geom.Point2D): Boolean =
+      contains(p.getX, p.getY)
 
     override def intersects(x: Double, y: Double, w: Double, h: Double): Boolean =
       current.intersects(x, y, w, h)
 
-    override def intersects(r: java.awt.geom.Rectangle2D): Boolean = ???
+    override def intersects(r: java.awt.geom.Rectangle2D): Boolean =
+      intersects(r.getX, r.getY, r.getWidth, r.getHeight)
 
     override def contains(x: Double, y: Double, w: Double, h: Double): Boolean =
       current.contains(x, y, w, h)
 
-    override def contains(r: java.awt.geom.Rectangle2D): Boolean = ???
+    override def contains(r: java.awt.geom.Rectangle2D): Boolean =
+      contains(r.getX, r.getY, r.getWidth, r.getHeight)
 
     private def wrapTransform(at: java.awt.geom.AffineTransform): AffineTransform =
       if (at == null) null else {
