@@ -29,47 +29,47 @@ package de.sciss.infibrillae.geom.impl
  * questions.
  */
 
-final class CurveLink(private var curve: Curve, private var ytop: Double,
-                      private var ybot: Double, private var etag: Int) {
-  if (ytop < curve.getYTop || ybot > curve.getYBot)
-    throw new InternalError("bad curvelink [" + ytop + "=>" + ybot + "] for " + curve)
+final class CurveLink(private var curve: Curve, private var yTop: Double,
+                      private var yBot: Double, private var eTag: Int) {
+  if (yTop < curve.getYTop || yBot > curve.getYBot)
+    throw new InternalError("bad curvelink [" + yTop + "=>" + yBot + "] for " + curve)
 
   private/*[geom]*/ var next: CurveLink = null
 
-  def absorb(link: CurveLink): Boolean = absorb(link.curve, link.ytop, link.ybot, link.etag)
+  def absorb(link: CurveLink): Boolean = absorb(link.curve, link.yTop, link.yBot, link.eTag)
 
-  def absorb(curve: Curve, ystart: Double, yend: Double, etag: Int): Boolean = {
-    if ((this.curve ne curve) || this.etag != etag || ybot < ystart || ytop > yend) return false
-    if (ystart < curve.getYTop || yend > curve.getYBot) {
-      throw new InternalError("bad curvelink [" + ystart + "=>" + yend + "] for " + curve)
+  def absorb(curve: Curve, yStart: Double, yEnd: Double, eTag: Int): Boolean = {
+    if ((this.curve ne curve) || this.eTag != eTag || yBot < yStart || yTop > yEnd) return false
+    if (yStart < curve.getYTop || yEnd > curve.getYBot) {
+      throw new InternalError("bad curvelink [" + yStart + "=>" + yEnd + "] for " + curve)
     }
-    this.ytop = Math.min(ytop, ystart)
-    this.ybot = Math.max(ybot, yend)
+    this.yTop = Math.min(yTop, yStart)
+    this.yBot = Math.max(yBot, yEnd)
     true
   }
 
-  def isEmpty: Boolean = ytop == ybot
+  def isEmpty: Boolean = yTop == yBot
 
   def getCurve: Curve = curve
 
   def getSubCurve: Curve = {
-    if (ytop == curve.getYTop && ybot == curve.getYBot) return curve.getWithDirection(etag)
-    curve.getSubCurve(ytop, ybot, etag)
+    if (yTop == curve.getYTop && yBot == curve.getYBot) return curve.getWithDirection(eTag)
+    curve.getSubCurve(yTop, yBot, eTag)
   }
 
   def getMoveto = new Order0(getXTop, getYTop)
 
-  def getXTop: Double = curve.XforY(ytop)
+  def getXTop: Double = curve.XforY(yTop)
 
-  def getYTop: Double = ytop
+  def getYTop: Double = yTop
 
-  def getXBot: Double = curve.XforY(ybot)
+  def getXBot: Double = curve.XforY(yBot)
 
-  def getYBot: Double = ybot
+  def getYBot: Double = yBot
 
-  def getX: Double = curve.XforY(ytop)
+  def getX: Double = curve.XforY(yTop)
 
-  def getEdgeTag: Int = etag
+  def getEdgeTag: Int = eTag
 
   def setNext(link: CurveLink): Unit =
     this.next = link

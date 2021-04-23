@@ -34,21 +34,21 @@ object Edge {
   private[geom] final val GROW_PARTS = 10
 }
 
-final class Edge(private var curve: Curve, private var ctag: Int, private var etag: Int) {
-  private/*[geom]*/ var activey     = 0.0
-  private/*[geom]*/ var equivalence = 0
+final class Edge(private val curve: Curve, cTag: Int, private var eTag: Int) {
+  private var activeY     = 0.0
+  private var equivalence = 0
 
-  def this(c: Curve, ctag: Int) =
-    this(c, ctag, AreaOp.ETAG_IGNORE)
+  def this(c: Curve, cTag: Int) =
+    this(c, cTag, AreaOp.ETAG_IGNORE)
 
   def getCurve: Curve = curve
 
-  def getCurveTag: Int = ctag
+  def getCurveTag: Int = cTag
 
-  def getEdgeTag: Int = etag
+  def getEdgeTag: Int = eTag
 
-  def setEdgeTag(etag: Int): Unit =
-    this.etag = etag
+  def setEdgeTag(eTag: Int): Unit =
+    this.eTag = eTag
 
   def getEquivalence: Int = equivalence
 
@@ -87,13 +87,13 @@ final class Edge(private var curve: Curve, private var ctag: Int, private var et
   }
 
   def record(yend: Double, etag: Int): Unit = {
-    this.activey  = yend
-    this.etag     = etag
+    this.activeY  = yend
+    this.eTag     = etag
   }
 
-  def isActiveFor(y: Double, etag: Int): Boolean = this.etag == etag && this.activey >= y
+  def isActiveFor(y: Double, etag: Int): Boolean = this.eTag == etag && this.activeY >= y
 
   override def toString: String = "Edge[" + curve + ", " +
-    (if (ctag == AreaOp.CTAG_LEFT) "L" else "R") + ", " +
-    (if (etag == AreaOp.ETAG_ENTER) "I" else { if (etag == AreaOp.ETAG_EXIT) "O" else "N" }) + "]"
+    (if (cTag == AreaOp.CTAG_LEFT) "L" else "R") + ", " +
+    (if (eTag == AreaOp.ETAG_ENTER) "I" else { if (eTag == AreaOp.ETAG_EXIT) "O" else "N" }) + "]"
 }

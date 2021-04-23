@@ -31,32 +31,32 @@ package de.sciss.infibrillae.geom.impl
 
 import de.sciss.infibrillae.geom.{IllegalPathStateException, PathIterator, Rectangle2D, impl}
 
-import java.util
+import scala.collection.mutable
 
 object Curve {
   final val INCREASING = 1
   final val DECREASING = -1
 
-  def insertMove(curves: util.Vector[Curve], x: Double, y: Double): Unit = {
-    curves.add(new impl.Order0(x, y))
+  def insertMove(curves: mutable.Growable[Curve], x: Double, y: Double): Unit = {
+    curves += new impl.Order0(x, y)
   }
 
-  def insertLine(curves: util.Vector[Curve], x0: Double, y0: Double, x1: Double, y1: Double): Unit = {
-    if (y0 < y1) curves.add(new Order1(x0, y0, x1, y1, INCREASING))
-    else if (y0 > y1) curves.add(new Order1(x1, y1, x0, y0, DECREASING))
+  def insertLine(curves: mutable.Growable[Curve], x0: Double, y0: Double, x1: Double, y1: Double): Unit = {
+    if      (y0 < y1) curves += new Order1(x0, y0, x1, y1, INCREASING)
+    else if (y0 > y1) curves += new Order1(x1, y1, x0, y0, DECREASING)
     else {
       // Do not add horizontal lines
     }
   }
 
-  def insertQuad(curves: util.Vector[Curve], x0: Double, y0: Double, coords: Array[Double]): Unit = {
+  def insertQuad(curves: mutable.Growable[Curve], x0: Double, y0: Double, coords: Array[Double]): Unit = {
     val y1 = coords(3)
     if (y0 > y1) Order2.insert(curves, coords, coords(2), y1, coords(0), coords(1), x0, y0, DECREASING)
     else if (y0 == y1 && y0 == coords(1)) ()
     else Order2.insert(curves, coords, x0, y0, coords(0), coords(1), coords(2), y1, INCREASING)
   }
 
-  def insertCubic(curves: util.Vector[Curve], x0: Double, y0: Double, coords: Array[Double]): Unit = {
+  def insertCubic(curves: mutable.Growable[Curve], x0: Double, y0: Double, coords: Array[Double]): Unit = {
     val y1 = coords(5)
     if (y0 > y1) Order3.insert(curves, coords, coords(4), y1, coords(2), coords(3), coords(0), coords(1), x0, y0, DECREASING)
     else if (y0 == y1 && y0 == coords(1) && y0 == coords(3)) ()
@@ -80,56 +80,55 @@ object Curve {
   def pointCrossingsForPath(pi: PathIterator, px: Double, py: Double): Int = {
     if (pi.isDone) return 0
     val coords = new Array[Double](6)
-    if (pi.currentSegment(coords) != PathIterator.SEG_MOVETO) throw new IllegalPathStateException("missing initial moveto " + "in path definition")
+    if (pi.currentSegment(coords) != PathIterator.SEG_MOVETO)
+      throw new IllegalPathStateException("missing initial moveto " + "in path definition")
     pi.next()
-    var movx = coords(0)
-    var movy = coords(1)
-    var curx = movx
-    var cury = movy
-    var endx = .0
-    var endy = .0
+    var movX = coords(0)
+    var movY = coords(1)
+    var curX = movX
+    var curY = movY
+    var endX = 0.0
+    var endY = 0.0
     var crossings = 0
-    while ( {
-      !pi.isDone
-    }) {
+    while (!pi.isDone) {
       pi.currentSegment(coords) match {
         case PathIterator.SEG_MOVETO =>
-          if (cury != movy) crossings += pointCrossingsForLine(px, py, curx, cury, movx, movy)
-          curx = coords(0)
-          movx = curx
-          cury = coords(1)
-          movy = cury
+          if (curY != movY) crossings += pointCrossingsForLine(px, py, curX, curY, movX, movY)
+          curX = coords(0)
+          movX = curX
+          curY = coords(1)
+          movY = curY
 
         case PathIterator.SEG_LINETO =>
-          endx = coords(0)
-          endy = coords(1)
-          crossings += pointCrossingsForLine(px, py, curx, cury, endx, endy)
-          curx = endx
-          cury = endy
+          endX = coords(0)
+          endY = coords(1)
+          crossings += pointCrossingsForLine(px, py, curX, curY, endX, endY)
+          curX = endX
+          curY = endY
 
         case PathIterator.SEG_QUADTO =>
-          endx = coords(2)
-          endy = coords(3)
-          crossings += pointCrossingsForQuad(px, py, curx, cury, coords(0), coords(1), endx, endy, 0)
-          curx = endx
-          cury = endy
+          endX = coords(2)
+          endY = coords(3)
+          crossings += pointCrossingsForQuad(px, py, curX, curY, coords(0), coords(1), endX, endY, 0)
+          curX = endX
+          curY = endY
 
         case PathIterator.SEG_CUBICTO =>
-          endx = coords(4)
-          endy = coords(5)
-          crossings += pointCrossingsForCubic(px, py, curx, cury, coords(0), coords(1), coords(2), coords(3), endx, endy, 0)
-          curx = endx
-          cury = endy
+          endX = coords(4)
+          endY = coords(5)
+          crossings += pointCrossingsForCubic(px, py, curX, curY, coords(0), coords(1), coords(2), coords(3), endX, endY, 0)
+          curX = endX
+          curY = endY
 
         case PathIterator.SEG_CLOSE =>
-          if (cury != movy) crossings += pointCrossingsForLine(px, py, curx, cury, movx, movy)
-          curx = movx
-          cury = movy
+          if (curY != movY) crossings += pointCrossingsForLine(px, py, curX, curY, movX, movY)
+          curX = movX
+          curY = movY
 
       }
       pi.next()
     }
-    if (cury != movy) crossings += pointCrossingsForLine(px, py, curx, cury, movx, movy)
+    if (curY != movY) crossings += pointCrossingsForLine(px, py, curX, curY, movX, movY)
     crossings
   }
 
@@ -147,8 +146,8 @@ object Curve {
     if (px >= x0 && px >= x1) return 0
     if (px < x0 && px < x1) return if (y0 < y1) 1
     else -1
-    val xintercept = x0 + (py - y0) * (x1 - x0) / (y1 - y0)
-    if (px >= xintercept) return 0
+    val xIntercept = x0 + (py - y0) * (x1 - x0) / (y1 - y0)
+    if (px >= xIntercept) return 0
     if (y0 < y1) 1
     else -1
   }
@@ -163,7 +162,8 @@ object Curve {
     * +1 is added for each crossing where the Y coordinate is increasing
     * -1 is added for each crossing where the Y coordinate is decreasing
     */
-  def pointCrossingsForQuad(px: Double, py: Double, x0: Double, y0: Double, xc: Double, yc: Double, x1: Double, y1: Double, level: Int): Int = {
+  def pointCrossingsForQuad(px: Double, py: Double, x0: Double, y0: Double, xc: Double, yc: Double,
+                            x1: Double, y1: Double, level: Int): Int = {
     var _xc = xc
     var _yc = yc
     if (py < y0 && py < _yc && py < y1) return 0
@@ -191,7 +191,8 @@ object Curve {
       // These values are also NaN if opposing infinities are added
       return 0
     }
-    pointCrossingsForQuad(px, py, x0, y0, x0c, y0c, _xc, _yc, level + 1) + pointCrossingsForQuad(px, py, _xc, _yc, xc1, yc1, x1, y1, level + 1)
+    pointCrossingsForQuad  (px, py, x0, y0, x0c, y0c, _xc, _yc, level + 1) +
+      pointCrossingsForQuad(px, py, _xc, _yc, xc1, yc1, x1, y1, level + 1)
   }
 
   /**
@@ -204,7 +205,8 @@ object Curve {
     * +1 is added for each crossing where the Y coordinate is increasing
     * -1 is added for each crossing where the Y coordinate is decreasing
     */
-  def pointCrossingsForCubic(px: Double, py: Double, x0: Double, y0: Double, xc0: Double, yc0: Double, xc1: Double, yc1: Double, x1: Double, y1: Double, level: Int): Int = {
+  def pointCrossingsForCubic(px: Double, py: Double, x0: Double, y0: Double, xc0: Double, yc0: Double,
+                             xc1: Double, yc1: Double, x1: Double, y1: Double, level: Int): Int = {
     var _xc0 = xc0
     var _yc0 = yc0
     var _xc1 = xc1
@@ -269,7 +271,7 @@ object Curve {
     * "false" if the path intersects the rectangle.  Thus, no
     * further processing is ever needed if an intersection occurs.
     */
-  val RECT_INTERSECTS = 0x80000000
+  final val RECT_INTERSECTS = 0x80000000
 
   /**
     * Accumulate the number of times the path crosses the shadow
@@ -283,8 +285,8 @@ object Curve {
     * thrown.
     * The caller must check r[xy]{min,max} for NaN values.
     */
-  def rectCrossingsForPath(pi: PathIterator, rxmin: Double, rymin: Double, rxmax: Double, rymax: Double): Int = {
-    if (rxmax <= rxmin || rymax <= rymin) return 0
+  def rectCrossingsForPath(pi: PathIterator, rxMin: Double, ryMin: Double, rxMax: Double, ryMax: Double): Int = {
+    if (rxMax <= rxMin || ryMax <= ryMin) return 0
     if (pi.isDone) return 0
     val coords = new Array[Double](6)
     if (pi.currentSegment(coords) != PathIterator.SEG_MOVETO) throw new IllegalPathStateException("missing initial moveto " + "in path definition")
@@ -305,7 +307,7 @@ object Curve {
     }) {
       pi.currentSegment(coords) match {
         case PathIterator.SEG_MOVETO =>
-          if (curx != movx || cury != movy) crossings = rectCrossingsForLine(crossings, rxmin, rymin, rxmax, rymax, curx, cury, movx, movy)
+          if (curx != movx || cury != movy) crossings = rectCrossingsForLine(crossings, rxMin, ryMin, rxMax, ryMax, curx, cury, movx, movy)
           // Count should always be a multiple of 2 here.
           // assert((crossings & 1) != 0);
           curx = coords(0)
@@ -316,33 +318,33 @@ object Curve {
         case PathIterator.SEG_LINETO =>
           endx = coords(0)
           endy = coords(1)
-          crossings = rectCrossingsForLine(crossings, rxmin, rymin, rxmax, rymax, curx, cury, endx, endy)
+          crossings = rectCrossingsForLine(crossings, rxMin, ryMin, rxMax, ryMax, curx, cury, endx, endy)
           curx = endx
           cury = endy
 
         case PathIterator.SEG_QUADTO =>
           endx = coords(2)
           endy = coords(3)
-          crossings = rectCrossingsForQuad(crossings, rxmin, rymin, rxmax, rymax, curx, cury, coords(0), coords(1), endx, endy, 0)
+          crossings = rectCrossingsForQuad(crossings, rxMin, ryMin, rxMax, ryMax, curx, cury, coords(0), coords(1), endx, endy, 0)
           curx = endx
           cury = endy
 
         case PathIterator.SEG_CUBICTO =>
           endx = coords(4)
           endy = coords(5)
-          crossings = rectCrossingsForCubic(crossings, rxmin, rymin, rxmax, rymax, curx, cury, coords(0), coords(1), coords(2), coords(3), endx, endy, 0)
+          crossings = rectCrossingsForCubic(crossings, rxMin, ryMin, rxMax, ryMax, curx, cury, coords(0), coords(1), coords(2), coords(3), endx, endy, 0)
           curx = endx
           cury = endy
 
         case PathIterator.SEG_CLOSE =>
-          if (curx != movx || cury != movy) crossings = rectCrossingsForLine(crossings, rxmin, rymin, rxmax, rymax, curx, cury, movx, movy)
+          if (curx != movx || cury != movy) crossings = rectCrossingsForLine(crossings, rxMin, ryMin, rxMax, ryMax, curx, cury, movx, movy)
           curx = movx
           cury = movy
 
       }
       pi.next()
     }
-    if (crossings != RECT_INTERSECTS && (curx != movx || cury != movy)) crossings = rectCrossingsForLine(crossings, rxmin, rymin, rxmax, rymax, curx, cury, movx, movy)
+    if (crossings != RECT_INTERSECTS && (curx != movx || cury != movy)) crossings = rectCrossingsForLine(crossings, rxMin, ryMin, rxMax, ryMax, curx, cury, movx, movy)
     crossings
   }
 
@@ -351,25 +353,26 @@ object Curve {
     * extending to the right of the rectangle.  See the comment
     * for the RECT_INTERSECTS constant for more complete details.
     */
-  def rectCrossingsForLine(crossings: Int, rxmin: Double, rymin: Double, rxmax: Double, rymax: Double, x0: Double, y0: Double, x1: Double, y1: Double): Int = {
+  def rectCrossingsForLine(crossings: Int, rxMin: Double, ryMin: Double, rxMax: Double, ryMax: Double,
+                           x0: Double, y0: Double, x1: Double, y1: Double): Int = {
     var _crossings = crossings
-    if (y0 >= rymax && y1 >= rymax) return _crossings
-    if (y0 <= rymin && y1 <= rymin) return _crossings
-    if (x0 <= rxmin && x1 <= rxmin) return _crossings
-    if (x0 >= rxmax && x1 >= rxmax) { // Line is entirely to the right of the rect
+    if (y0 >= ryMax && y1 >= ryMax) return _crossings
+    if (y0 <= ryMin && y1 <= ryMin) return _crossings
+    if (x0 <= rxMin && x1 <= rxMin) return _crossings
+    if (x0 >= rxMax && x1 >= rxMax) { // Line is entirely to the right of the rect
       // and the vertical ranges of the two overlap by a non-empty amount
       // Thus, this line segment is partially in the "right-shadow"
       // Path may have done a complete crossing
       // Or path may have entered or exited the right-shadow
       if (y0 < y1) { // y-increasing line segment...
         // We know that y0 < rymax and y1 > rymin
-        if (y0 <= rymin) _crossings += 1
-        if (y1 >= rymax) _crossings += 1
+        if (y0 <= ryMin) _crossings += 1
+        if (y1 >= ryMax) _crossings += 1
       }
       else if (y1 < y0) { // y-decreasing line segment...
         // We know that y1 < rymax and y0 > rymin
-        if (y1 <= rymin) _crossings -= 1
-        if (y0 >= rymax) _crossings -= 1
+        if (y1 <= ryMin) _crossings -= 1
+        if (y0 >= ryMax) _crossings -= 1
       }
       return _crossings
     }
@@ -377,24 +380,24 @@ object Curve {
     // Both x and y ranges overlap by a non-empty amount
     // First do trivial INTERSECTS rejection of the cases
     // where one of the endpoints is inside the rectangle.
-    if ((x0 > rxmin && x0 < rxmax && y0 > rymin && y0 < rymax) || (x1 > rxmin && x1 < rxmax && y1 > rymin && y1 < rymax)) return RECT_INTERSECTS
+    if ((x0 > rxMin && x0 < rxMax && y0 > ryMin && y0 < ryMax) || (x1 > rxMin && x1 < rxMax && y1 > ryMin && y1 < ryMax)) return RECT_INTERSECTS
     // Otherwise calculate the y intercepts and see where
     // they fall with respect to the rectangle
     var xi0 = x0
-    if (y0 < rymin) xi0 += ((rymin - y0) * (x1 - x0) / (y1 - y0))
-    else if (y0 > rymax) xi0 += ((rymax - y0) * (x1 - x0) / (y1 - y0))
+    if (y0 < ryMin) xi0 += ((ryMin - y0) * (x1 - x0) / (y1 - y0))
+    else if (y0 > ryMax) xi0 += ((ryMax - y0) * (x1 - x0) / (y1 - y0))
     var xi1 = x1
-    if (y1 < rymin) xi1 += ((rymin - y1) * (x0 - x1) / (y0 - y1))
-    else if (y1 > rymax) xi1 += ((rymax - y1) * (x0 - x1) / (y0 - y1))
-    if (xi0 <= rxmin && xi1 <= rxmin) return _crossings
-    if (xi0 >= rxmax && xi1 >= rxmax) {
+    if (y1 < ryMin) xi1 += ((ryMin - y1) * (x0 - x1) / (y0 - y1))
+    else if (y1 > ryMax) xi1 += ((ryMax - y1) * (x0 - x1) / (y0 - y1))
+    if (xi0 <= rxMin && xi1 <= rxMin) return _crossings
+    if (xi0 >= rxMax && xi1 >= rxMax) {
       if (y0 < y1) {
-        if (y0 <= rymin) _crossings += 1
-        if (y1 >= rymax) _crossings += 1
+        if (y0 <= ryMin) _crossings += 1
+        if (y1 >= ryMax) _crossings += 1
       }
       else if (y1 < y0) {
-        if (y1 <= rymin) _crossings -= 1
-        if (y0 >= rymax) _crossings -= 1
+        if (y1 <= ryMin) _crossings -= 1
+        if (y0 >= ryMax) _crossings -= 1
       }
       return _crossings
     }
@@ -406,15 +409,15 @@ object Curve {
     * extending to the right of the rectangle.  See the comment
     * for the RECT_INTERSECTS constant for more complete details.
     */
-  def rectCrossingsForQuad(crossings: Int, rxmin: Double, rymin: Double, rxmax: Double, rymax: Double,
+  def rectCrossingsForQuad(crossings: Int, rxMin: Double, ryMin: Double, rxMax: Double, ryMax: Double,
                            x0: Double, y0: Double, xc: Double, yc: Double, x1: Double, y1: Double, level: Int): Int = {
     var _crossings = crossings
     var _xc = xc
     var _yc = yc
-    if (y0 >= rymax && _yc >= rymax && y1 >= rymax) return _crossings
-    if (y0 <= rymin && _yc <= rymin && y1 <= rymin) return _crossings
-    if (x0 <= rxmin && _xc <= rxmin && x1 <= rxmin) return _crossings
-    if (x0 >= rxmax && _xc >= rxmax && x1 >= rxmax) { // Quad is entirely to the right of the rect
+    if (y0 >= ryMax && _yc >= ryMax && y1 >= ryMax) return _crossings
+    if (y0 <= ryMin && _yc <= ryMin && y1 <= ryMin) return _crossings
+    if (x0 <= rxMin && _xc <= rxMin && x1 <= rxMin) return _crossings
+    if (x0 >= rxMax && _xc >= rxMax && x1 >= rxMax) { // Quad is entirely to the right of the rect
       // and the vertical range of the 3 Y coordinates of the quad
       // overlaps the vertical range of the rect by a non-empty amount
       // We now judge the crossings solely based on the line segment
@@ -423,19 +426,19 @@ object Curve {
       // point may be causing the Y range intersection while the
       // two endpoints are entirely above or below.
       if (y0 < y1) {
-        if (y0 <= rymin && y1 > rymin) _crossings += 1
-        if (y0 < rymax && y1 >= rymax) _crossings += 1
+        if (y0 <= ryMin && y1 > ryMin) _crossings += 1
+        if (y0 < ryMax && y1 >= ryMax) _crossings += 1
       }
       else if (y1 < y0) {
-        if (y1 <= rymin && y0 > rymin) _crossings -= 1
-        if (y1 < rymax && y0 >= rymax) _crossings -= 1
+        if (y1 <= ryMin && y0 > ryMin) _crossings -= 1
+        if (y1 < ryMax && y0 >= ryMax) _crossings -= 1
       }
       return _crossings
     }
     // The intersection of ranges is more complicated
-    if ((x0 < rxmax && x0 > rxmin && y0 < rymax && y0 > rymin) || (x1 < rxmax && x1 > rxmin && y1 < rymax && y1 > rymin)) return RECT_INTERSECTS
+    if ((x0 < rxMax && x0 > rxMin && y0 < ryMax && y0 > ryMin) || (x1 < rxMax && x1 > rxMin && y1 < ryMax && y1 > ryMin)) return RECT_INTERSECTS
     // Otherwise, subdivide and look for one of the cases above.
-    if (level > 52) return rectCrossingsForLine(_crossings, rxmin, rymin, rxmax, rymax, x0, y0, x1, y1)
+    if (level > 52) return rectCrossingsForLine(_crossings, rxMin, ryMin, rxMax, ryMax, x0, y0, x1, y1)
     val x0c = (x0 + _xc) / 2
     val y0c = (y0 + _yc) / 2
     val xc1 = (_xc + x1) / 2
@@ -443,8 +446,8 @@ object Curve {
     _xc = (x0c + xc1) / 2
     _yc = (y0c + yc1) / 2
     if (java.lang.Double.isNaN(_xc) || java.lang.Double.isNaN(_yc)) return 0
-    _crossings = rectCrossingsForQuad(_crossings, rxmin, rymin, rxmax, rymax, x0, y0, x0c, y0c, _xc, _yc, level + 1)
-    if (_crossings != RECT_INTERSECTS) _crossings = rectCrossingsForQuad(_crossings, rxmin, rymin, rxmax, rymax, _xc, _yc, xc1, yc1, x1, y1, level + 1)
+    _crossings = rectCrossingsForQuad(_crossings, rxMin, ryMin, rxMax, ryMax, x0, y0, x0c, y0c, _xc, _yc, level + 1)
+    if (_crossings != RECT_INTERSECTS) _crossings = rectCrossingsForQuad(_crossings, rxMin, ryMin, rxMax, ryMax, _xc, _yc, xc1, yc1, x1, y1, level + 1)
     _crossings
   }
 
@@ -453,7 +456,7 @@ object Curve {
     * extending to the right of the rectangle.  See the comment
     * for the RECT_INTERSECTS constant for more complete details.
     */
-  def rectCrossingsForCubic(crossings: Int, rxmin: Double, rymin: Double, rxmax: Double, rymax: Double,
+  def rectCrossingsForCubic(crossings: Int, rxMin: Double, ryMin: Double, rxMax: Double, ryMax: Double,
                             x0: Double, y0: Double, xc0: Double, yc0: Double, xc1: Double, yc1: Double,
                             x1: Double, y1: Double, level: Int): Int = {
     var _crossings = crossings
@@ -461,40 +464,40 @@ object Curve {
     var _yc0 = yc0
     var _xc1 = xc1
     var _yc1 = yc1
-    if (y0 >= rymax && _yc0 >= rymax && _yc1 >= rymax && y1 >= rymax) return _crossings
-    if (y0 <= rymin && _yc0 <= rymin && _yc1 <= rymin && y1 <= rymin) return _crossings
-    if (x0 <= rxmin && _xc0 <= rxmin && _xc1 <= rxmin && x1 <= rxmin) return _crossings
-    if (x0 >= rxmax && _xc0 >= rxmax && _xc1 >= rxmax && x1 >= rxmax) { // Cubic is entirely to the right of the rect
+    if (y0 >= ryMax && _yc0 >= ryMax && _yc1 >= ryMax && y1 >= ryMax) return _crossings
+    if (y0 <= ryMin && _yc0 <= ryMin && _yc1 <= ryMin && y1 <= ryMin) return _crossings
+    if (x0 <= rxMin && _xc0 <= rxMin && _xc1 <= rxMin && x1 <= rxMin) return _crossings
+    if (x0 >= rxMax && _xc0 >= rxMax && _xc1 >= rxMax && x1 >= rxMax) { // Cubic is entirely to the right of the rect
       // and the vertical range of the 4 Y coordinates of the cubic
       // connecting the endpoints of the cubic.
       // points may be causing the Y range intersection while the
       if (y0 < y1) {
-        if (y0 <= rymin && y1 > rymin) _crossings += 1
-        if (y0 < rymax && y1 >= rymax) _crossings += 1
+        if (y0 <= ryMin && y1 > ryMin) _crossings += 1
+        if (y0 < ryMax && y1 >= ryMax) _crossings += 1
       }
       else if (y1 < y0) {
-        if (y1 <= rymin && y0 > rymin) _crossings -= 1
-        if (y1 < rymax && y0 >= rymax) _crossings -= 1
+        if (y1 <= ryMin && y0 > ryMin) _crossings -= 1
+        if (y1 < ryMax && y0 >= ryMax) _crossings -= 1
       }
       return _crossings
     }
-    if ((x0 > rxmin && x0 < rxmax && y0 > rymin && y0 < rymax) || (x1 > rxmin && x1 < rxmax && y1 > rymin && y1 < rymax)) return RECT_INTERSECTS
-    if (level > 52) return rectCrossingsForLine(_crossings, rxmin, rymin, rxmax, rymax, x0, y0, x1, y1)
-    var xmid = (_xc0 + _xc1) / 2
-    var ymid = (_yc0 + _yc1) / 2
+    if ((x0 > rxMin && x0 < rxMax && y0 > ryMin && y0 < ryMax) || (x1 > rxMin && x1 < rxMax && y1 > ryMin && y1 < ryMax)) return RECT_INTERSECTS
+    if (level > 52) return rectCrossingsForLine(_crossings, rxMin, ryMin, rxMax, ryMax, x0, y0, x1, y1)
+    var xMid = (_xc0 + _xc1) / 2
+    var yMid = (_yc0 + _yc1) / 2
     _xc0 = (x0 + _xc0) / 2
     _yc0 = (y0 + _yc0) / 2
     _xc1 = (_xc1 + x1) / 2
     _yc1 = (_yc1 + y1) / 2
-    val xc0m = (_xc0 + xmid) / 2
-    val yc0m = (_yc0 + ymid) / 2
-    val xmc1 = (xmid + _xc1) / 2
-    val ymc1 = (ymid + _yc1) / 2
-    xmid = (xc0m + xmc1) / 2
-    ymid = (yc0m + ymc1) / 2
-    if (java.lang.Double.isNaN(xmid) || java.lang.Double.isNaN(ymid)) return 0
-    _crossings = rectCrossingsForCubic(_crossings, rxmin, rymin, rxmax, rymax, x0, y0, _xc0, _yc0, xc0m, yc0m, xmid, ymid, level + 1)
-    if (_crossings != RECT_INTERSECTS) _crossings = rectCrossingsForCubic(_crossings, rxmin, rymin, rxmax, rymax, xmid, ymid, xmc1, ymc1, _xc1, _yc1, x1, y1, level + 1)
+    val xc0m = (_xc0 + xMid) / 2
+    val yc0m = (_yc0 + yMid) / 2
+    val xmc1 = (xMid + _xc1) / 2
+    val ymc1 = (yMid + _yc1) / 2
+    xMid = (xc0m + xmc1) / 2
+    yMid = (yc0m + ymc1) / 2
+    if (java.lang.Double.isNaN(xMid) || java.lang.Double.isNaN(yMid)) return 0
+    _crossings = rectCrossingsForCubic(_crossings, rxMin, ryMin, rxMax, ryMax, x0, y0, _xc0, _yc0, xc0m, yc0m, xMid, yMid, level + 1)
+    if (_crossings != RECT_INTERSECTS) _crossings = rectCrossingsForCubic(_crossings, rxMin, ryMin, rxMax, ryMax, xMid, yMid, xmc1, ymc1, _xc1, _yc1, x1, y1, level + 1)
     _crossings
   }
 
@@ -502,21 +505,21 @@ object Curve {
     v
   }
 
-  def orderof(x1: Double, x2: Double): Int = {
+  def orderOf(x1: Double, x2: Double): Int = {
     if (x1 < x2) return -1
     if (x1 > x2) return 1
     0
   }
 
-  def signeddiffbits(y1: Double, y2: Double): Long = java.lang.Double.doubleToLongBits(y1) - java.lang.Double.doubleToLongBits(y2)
+  def signedDiffBits(y1: Double, y2: Double): Long = java.lang.Double.doubleToLongBits(y1) - java.lang.Double.doubleToLongBits(y2)
 
-  def diffbits(y1: Double, y2: Double): Long = Math.abs(java.lang.Double.doubleToLongBits(y1) - java.lang.Double.doubleToLongBits(y2))
+  def diffBits(y1: Double, y2: Double): Long = Math.abs(java.lang.Double.doubleToLongBits(y1) - java.lang.Double.doubleToLongBits(y2))
 
   def prev(v: Double): Double = java.lang.Double.longBitsToDouble(java.lang.Double.doubleToLongBits(v) - 1)
 
   def next(v: Double): Double = java.lang.Double.longBitsToDouble(java.lang.Double.doubleToLongBits(v) + 1)
 
-  val TMIN = 1E-3
+  final val T_MIN = 1E-3
 }
 
 abstract class Curve(private val direction: Int) {
@@ -786,7 +789,7 @@ abstract class Curve(private val direction: Int) {
             System.out.println("final order = "+orderof(this.XforY(ymid),
                                                         that.XforY(ymid)));
             */
-    Curve.orderof(this.XforY(ymid), that.XforY(ymid))
+    Curve.orderOf(this.XforY(ymid), that.XforY(ymid))
   }
 
   def findIntersect(that: Curve, yrange: Array[Double], ymin: Double, slevel: Int, tlevel: Int,
@@ -811,7 +814,7 @@ abstract class Curve(private val direction: Int) {
     // the two subcurves by half until they stop intersecting
     // (or until they get small enough to switch to a more
     //  intensive algorithm).
-    if (s1 - s0 > Curve.TMIN) {
+    if (s1 - s0 > Curve.T_MIN) {
       val s = (s0 + s1) / 2
       val xs = this.XforT(s)
       val ys = this.YforT(s)
@@ -820,7 +823,7 @@ abstract class Curve(private val direction: Int) {
         System.out.println("s1 = " + s1)
         throw new InternalError("no s progress!")
       }
-      if (t1 - t0 > Curve.TMIN) {
+      if (t1 - t0 > Curve.T_MIN) {
         val t = (t0 + t1) / 2
         val xt = that.XforT(t)
         val yt = that.YforT(t)
@@ -839,7 +842,7 @@ abstract class Curve(private val direction: Int) {
         if (yt1 >= ys) if (findIntersect(that, yrange, ymin, slevel + 1, tlevel, s, xs, ys, s1, xs1, ys1, t0, xt0, yt0, t1, xt1, yt1)) return true
       }
     }
-    else if (t1 - t0 > Curve.TMIN) {
+    else if (t1 - t0 > Curve.T_MIN) {
       val t = (t0 + t1) / 2
       val xt = that.XforT(t)
       val yt = that.YforT(t)

@@ -66,13 +66,14 @@ final class Order0(x: Double, y: Double) extends Curve(INCREASING) {
 
   override def crossingsFor(x: Double, y: Double) = 0
 
-  override def accumulateCrossings(c: Crossings): Boolean = x > c.getXLo && x < c.getXHi && y > c.getYLo && y < c.getYHi
+  override def accumulateCrossings(c: Crossings): Boolean =
+    x > c.getXLo && x < c.getXHi && y > c.getYLo && y < c.getYHi
 
   override def enlarge(r: Rectangle2D): Unit = {
     r.add(x, y)
   }
 
-  override def getSubCurve(ystart: Double, yend: Double, dir: Int): Curve = this
+  override def getSubCurve(yStart: Double, yEnd: Double, dir: Int): Curve = this
 
   override def getReversedCurve: Curve = this
 

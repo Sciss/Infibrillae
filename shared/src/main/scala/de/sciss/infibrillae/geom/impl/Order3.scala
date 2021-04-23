@@ -29,17 +29,17 @@ package de.sciss.infibrillae.geom.impl
  * questions.
  */
 
+import de.sciss.infibrillae.geom.impl.Curve.{DECREASING, INCREASING, diffBits, next, prev, round}
 import de.sciss.infibrillae.geom.{PathIterator, Rectangle2D}
-import de.sciss.infibrillae.geom.impl.Curve.{DECREASING, INCREASING, diffbits, next, prev, round}
 
 import java.awt.geom.QuadCurve2D
-import java.util
+import scala.collection.mutable
 
 object Order3 {
-  def insert(curves: util.Vector[Curve], tmp: Array[Double], x0: Double, y0: Double,
+  def insert(curves: mutable.Growable[Curve], tmp: Array[Double], x0: Double, y0: Double,
              cx0: Double, cy0: Double, cx1: Double, cy1: Double, x1: Double, y1: Double, direction: Int): Unit = {
-    var numparams = getHorizontalParams(y0, cy0, cy1, y1, tmp)
-    if (numparams == 0) { // We are using addInstance here to avoid inserting horisontal
+    var numParams = getHorizontalParams(y0, cy0, cy1, y1, tmp)
+    if (numParams == 0) { // We are using addInstance here to avoid inserting horisontal
       // segments
       addInstance(curves, x0, y0, cx0, cy0, cx1, cy1, x1, y1, direction)
       return
@@ -54,33 +54,33 @@ object Order3 {
     tmp(9) = x1
     tmp(10) = y1
     var t = tmp(0)
-    if (numparams > 1 && t > tmp(1)) { // Perform a "2 element sort"...
+    if (numParams > 1 && t > tmp(1)) { // Perform a "2 element sort"...
       tmp(0) = tmp(1)
       tmp(1) = t
       t = tmp(0)
     }
     split(tmp, 3, t)
-    if (numparams > 1) { // Recalculate tmp[1] relative to the range [tmp[0]...1]
+    if (numParams > 1) { // Recalculate tmp[1] relative to the range [tmp[0]...1]
       t = (tmp(1) - t) / (1 - t)
       split(tmp, 9, t)
     }
     var index = 3
-    if (direction == DECREASING) index += numparams * 6
+    if (direction == DECREASING) index += numParams * 6
     while ( {
-      numparams >= 0
+      numParams >= 0
     }) {
       addInstance(curves, tmp(index + 0), tmp(index + 1), tmp(index + 2), tmp(index + 3),
         tmp(index + 4), tmp(index + 5), tmp(index + 6), tmp(index + 7), direction)
-      numparams -= 1
+      numParams -= 1
       if (direction == INCREASING) index += 6
       else index -= 6
     }
   }
 
-  def addInstance(curves: util.Vector[Curve], x0: Double, y0: Double, cx0: Double, cy0: Double,
+  def addInstance(curves: mutable.Growable[Curve], x0: Double, y0: Double, cx0: Double, cy0: Double,
                   cx1: Double, cy1: Double, x1: Double, y1: Double, direction: Int): Unit = {
-    if      (y0 > y1) curves.add(new Order3(x1, y1, cx1, cy1, cx0, cy0, x0, y0, -direction))
-    else if (y1 > y0) curves.add(new Order3(x0, y0, cx0, cy0, cx1, cy1, x1, y1,  direction))
+    if      (y0 > y1) curves.addOne(new Order3(x1, y1, cx1, cy1, cx0, cy0, x0, y0, -direction))
+    else if (y1 > y0) curves.addOne(new Order3(x0, y0, cx0, cy0, cx1, cy1, x1, y1,  direction))
   }
 
   /*
@@ -132,9 +132,9 @@ object Order3 {
     ret(0) = _cp0
     ret(1) = (_cp1 - _cp0) * 2
     ret(2) = _c1 - _cp1 - _cp1 + _cp0
-    val numroots = QuadCurve2D.solveQuadratic(ret, ret)
+    val numRoots = QuadCurve2D.solveQuadratic(ret, ret)
     var j = 0
-    for (i <- 0 until numroots) {
+    for (i <- 0 until numRoots) {
       val t = ret(i)
       // No splits at t==0 and t==1
       if (t > 0 && t < 1) {
@@ -152,14 +152,14 @@ object Order3 {
        * into the array at coords[pos...pos+7] and coords[pos+6...pos+13].
        */
   def split(coords: Array[Double], pos: Int, t: Double): Unit = {
-    var x0 = .0
-    var y0 = .0
-    var cx0 = .0
-    var cy0 = .0
-    var cx1 = .0
-    var cy1 = .0
-    var x1 = .0
-    var y1 = .0
+    var x0  = 0.0
+    var y0  = 0.0
+    var cx0 = 0.0
+    var cy0 = 0.0
+    var cx1 = 0.0
+    var cy1 = 0.0
+    var x1  = 0.0
+    var y1  = 0.0
     x1 = coords(pos + 6)
     coords(pos + 12) = x1
     y1 = coords(pos + 7)
@@ -201,17 +201,17 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
   private val _cy0 = if (cy0 < y0) y0 else cy0
   private val _cy1 = if (cy1 > y1) y1 else cy1
 
-  private val xmin = Math.min(Math.min(x0, x1), Math.min(cx0, cx1))
-  private val xmax = Math.max(Math.max(x0, x1), Math.max(cx0, cx1))
+  private val xMin = Math.min(Math.min(x0, x1), Math.min(cx0, cx1))
+  private val xMax = Math.max(Math.max(x0, x1), Math.max(cx0, cx1))
 
-  private val xcoeff0 = x0
-  private val xcoeff1 = (cx0 - x0) * 3.0
-  private val xcoeff2 = (cx1 - cx0 - cx0 + x0) * 3.0
-  private val xcoeff3 = x1 - (cx1 - cx0) * 3.0 - x0
-  private val ycoeff0 = y0
-  private val ycoeff1 = (_cy0 - y0) * 3.0
-  private val ycoeff2 = (_cy1 - _cy0 - _cy0 + y0) * 3.0
-  private val ycoeff3 = y1 - (_cy1 - _cy0) * 3.0 - y0
+  private val xCoeff0 = x0
+  private val xCoeff1 = (cx0 - x0) * 3.0
+  private val xCoeff2 = (cx1 - cx0 - cx0 + x0) * 3.0
+  private val xCoeff3 = x1 - (cx1 - cx0) * 3.0 - x0
+  private val yCoeff0 = y0
+  private val yCoeff1 = (_cy0 - y0) * 3.0
+  private val yCoeff2 = (_cy1 - _cy0 - _cy0 + y0) * 3.0
+  private val yCoeff3 = y1 - (_cy1 - _cy0) * 3.0 - y0
 
   private var YforT1  = y0
   private var YforT2  = y0
@@ -229,8 +229,8 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
   override def getXBot: Double = x1
   override def getYBot: Double = y1
 
-  override def getXMin: Double = xmin
-  override def getXMax: Double = xmax
+  override def getXMin: Double = xMin
+  override def getXMax: Double = xMax
 
   override def getX0: Double = if (direction == INCREASING) x0 else x1
   override def getY0: Double = if (direction == INCREASING) y0 else y1
@@ -258,12 +258,12 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
     if (y == YforT2) return TforY2
     if (y == YforT3) return TforY3
     // From Numerical Recipes, 5.6, Quadratic and Cubic Equations
-    if (ycoeff3 == 0.0) { // The cubic degenerated to quadratic (or line or ...).
-      return Order2.TforY(y, ycoeff0, ycoeff1, ycoeff2)
+    if (yCoeff3 == 0.0) { // The cubic degenerated to quadratic (or line or ...).
+      return Order2.TforY(y, yCoeff0, yCoeff1, yCoeff2)
     }
-    val a = ycoeff2 / ycoeff3
-    val b = ycoeff1 / ycoeff3
-    val c = (ycoeff0 - y) / ycoeff3
+    val a = yCoeff2 / yCoeff3
+    val b = yCoeff1 / yCoeff3
+    val c = (yCoeff0 - y) / yCoeff3
 //    val roots = 0
     var Q = (a * a - 3.0 * b) / 9.0
     var R = (2.0 * a * a * a - 9.0 * a * b + 27.0 * c) / 54.0
@@ -321,23 +321,22 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
     var _t = t
     if (_t < -0.1 || _t > 1.1) return -1
     var y = YforT(_t)
-    var t0 = .0
-    var t1 = .0
+    var t0 = 0.0
+    var t1 = 0.0
     if (y < target) {
       t0 = _t
       t1 = 1
-    }
-    else {
+    } else {
       t0 = 0
       t1 = _t
     }
-    val origt = _t
-    val origy = y
-    var useslope = true
-    var break1 = false
+    val origT     = _t
+    val origY     = y
+    var useSlope  = true
+    var break1    = false
     while (!break1 && (y != target)) {
       var continue1 = false
-      if (!useslope) {
+      if (!useSlope) {
         val t2 = (t0 + t1) / 2
         if (t2 == t0 || t2 == t1) {
           break1 = true //todo: break is not supported
@@ -347,12 +346,12 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
       } else {
         val slope = dYforT(_t, 1)
         if (slope == 0) {
-          useslope = false
+          useSlope = false
           continue1 = true //todo: continue is not supported
         } else {
           val t2 = _t + ((target - y) / slope)
           if (t2 == _t || t2 <= t0 || t2 >= t1) {
-            useslope = false
+            useSlope = false
             continue1 = true //todo: continue is not supported
           } else {
             _t = t2
@@ -372,12 +371,12 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
     val verbose = false
     if (false && _t >= 0 && _t <= 1) {
       y = YforT(_t)
-      val tdiff = diffbits(_t, origt)
-      val ydiff = diffbits(y, origy)
-      val yerr  = diffbits(y, target)
+      val tdiff = diffBits(_t, origT)
+      val ydiff = diffBits(y, origY)
+      val yerr  = diffBits(y, target)
       if (yerr > 0 || (verbose && tdiff > 0)) {
         System.out.println("target was y = " + target)
-        System.out.println("original was y = " + origy + ", t = " + origt)
+        System.out.println("original was y = " + origY + ", t = " + origT)
         System.out.println("final was y = " + y + ", t = " + _t)
         System.out.println("t diff is " + tdiff)
         System.out.println("y diff is " + ydiff)
@@ -390,8 +389,7 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
           System.out.println("adjacent y's = [" + ylow + ", " + yhi + "]")
       }
     }
-    if (_t > 1) -1
-    else _t
+    if (_t > 1) -1 else _t
   }
 
   override def XforY(y: Double): Double = {
@@ -400,38 +398,38 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
     XforT(TforY(y))
   }
 
-  override def XforT(t: Double): Double = (((xcoeff3 * t) + xcoeff2) * t + xcoeff1) * t + xcoeff0
-  override def YforT(t: Double): Double = (((ycoeff3 * t) + ycoeff2) * t + ycoeff1) * t + ycoeff0
+  override def XforT(t: Double): Double = (((xCoeff3 * t) + xCoeff2) * t + xCoeff1) * t + xCoeff0
+  override def YforT(t: Double): Double = (((yCoeff3 * t) + yCoeff2) * t + yCoeff1) * t + yCoeff0
 
   override def dXforT(t: Double, deriv: Int): Double = deriv match {
     case 0 =>
-      (((xcoeff3 * t) + xcoeff2) * t + xcoeff1) * t + xcoeff0
+      (((xCoeff3 * t) + xCoeff2) * t + xCoeff1) * t + xCoeff0
     case 1 =>
-      ((3 * xcoeff3 * t) + 2 * xcoeff2) * t + xcoeff1
+      ((3 * xCoeff3 * t) + 2 * xCoeff2) * t + xCoeff1
     case 2 =>
-      (6 * xcoeff3 * t) + 2 * xcoeff2
+      (6 * xCoeff3 * t) + 2 * xCoeff2
     case 3 =>
-      6 * xcoeff3
+      6 * xCoeff3
     case _ =>
       0
   }
 
   override def dYforT(t: Double, deriv: Int): Double = deriv match {
     case 0 =>
-      (((ycoeff3 * t) + ycoeff2) * t + ycoeff1) * t + ycoeff0
+      (((yCoeff3 * t) + yCoeff2) * t + yCoeff1) * t + yCoeff0
     case 1 =>
-      ((3 * ycoeff3 * t) + 2 * ycoeff2) * t + ycoeff1
+      ((3 * yCoeff3 * t) + 2 * yCoeff2) * t + yCoeff1
     case 2 =>
-      (6 * ycoeff3 * t) + 2 * ycoeff2
+      (6 * yCoeff3 * t) + 2 * yCoeff2
     case 3 =>
-      6 * ycoeff3
+      6 * yCoeff3
     case _ =>
       0
   }
 
   override def nextVertical(t0: Double, t1: Double): Double = {
     var _t1 = t1
-    val eqn = Array(xcoeff1, 2 * xcoeff2, 3 * xcoeff3)
+    val eqn = Array(xCoeff1, 2 * xCoeff2, 3 * xCoeff3)
     val numroots = QuadCurve2D.solveQuadratic(eqn, eqn)
     for (i <- 0 until numroots) {
       if (eqn(i) > t0 && eqn(i) < _t1) _t1 = eqn(i)
@@ -441,22 +439,22 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
 
   override def enlarge(r: Rectangle2D): Unit = {
     r.add(x0, y0)
-    val eqn = Array(xcoeff1, 2 * xcoeff2, 3 * xcoeff3)
-    val numroots = QuadCurve2D.solveQuadratic(eqn, eqn)
-    for (i <- 0 until numroots) {
+    val eqn       = Array(xCoeff1, 2 * xCoeff2, 3 * xCoeff3)
+    val numRoots  = QuadCurve2D.solveQuadratic(eqn, eqn)
+    for (i <- 0 until numRoots) {
       val t = eqn(i)
       if (t > 0 && t < 1) r.add(XforT(t), YforT(t))
     }
     r.add(x1, y1)
   }
 
-  override def getSubCurve(ystart: Double, yend: Double, dir: Int): Curve = {
-    if (ystart <= y0 && yend >= y1) return getWithDirection(dir)
+  override def getSubCurve(yStart: Double, yEnd: Double, dir: Int): Curve = {
+    if (yStart <= y0 && yEnd >= y1) return getWithDirection(dir)
     val eqn = new Array[Double](14)
-    var t0 = .0
-    var t1 = .0
-    t0 = TforY(ystart)
-    t1 = TforY(yend)
+    var t0 = 0.0
+    var t1 = 0.0
+    t0 = TforY(yStart)
+    t1 = TforY(yEnd)
     eqn(0) = x0
     eqn(1) = y0
     eqn(2) = cx0
@@ -491,7 +489,7 @@ final class Order3(x0: Double, y0: Double, cx0: Double, cy0: Double, cx1: Double
       Order3.split(eqn, 0, t0 / t1)
       i = 6
     }
-    new Order3(eqn(i + 0), ystart, eqn(i + 2), eqn(i + 3), eqn(i + 4), eqn(i + 5), eqn(i + 6), yend, dir)
+    new Order3(eqn(i + 0), yStart, eqn(i + 2), eqn(i + 3), eqn(i + 4), eqn(i + 5), eqn(i + 6), yEnd, dir)
   }
 
   override def getReversedCurve = new Order3(x0, y0, cx0, _cy0, cx1, _cy1, x1, y1, -direction)

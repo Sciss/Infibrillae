@@ -34,7 +34,8 @@ import de.sciss.infibrillae.geom.PathIterator.{SEG_CLOSE, SEG_CUBICTO, SEG_LINET
 import de.sciss.infibrillae.geom.impl.{AreaOp, Crossings, Curve}
 
 import java.util.NoSuchElementException
-
+import scala.collection.mutable
+import scala.collection.{Seq => CSeq}
 
 /**
   * An `Area` object stores and manipulates a
@@ -99,10 +100,10 @@ import java.util.NoSuchElementException
   * @since 1.2
   */
 object Area {
-  private val EmptyCurves = new java.util.Vector[Curve]
+  private val EmptyCurves = Vector.empty[Curve] // new java.util.Vector[Curve]
 
-  private def pathToCurves(pi: PathIterator) = {
-    val curves = new java.util.Vector[Curve]
+  private def pathToCurves(pi: PathIterator): CSeq[Curve] = {
+    val curves = mutable.ArrayBuffer.empty[Curve]
     val windingRule = pi.getWindingRule
     // coords array is big enough for holding:
     //     coordinates returned from currentSegment (6)
@@ -122,9 +123,7 @@ object Area {
     var cury = 0.0
     var newx = .0
     var newy = .0
-    while ( {
-      !pi.isDone
-    }) {
+    while (!pi.isDone) {
       pi.currentSegment(coords) match {
         case PathIterator.SEG_MOVETO =>
           Curve.insertLine(curves, curx, cury, movx, movy)
@@ -169,7 +168,7 @@ object Area {
   }
 }
 
-class Area private (private var curves: java.util.Vector[Curve]) extends Shape with Cloneable {
+class Area private (private var curves: CSeq[Curve]) extends Shape with Cloneable {
 
   /**
     * Default constructor which creates an empty area.
@@ -337,7 +336,7 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
     * @since 1.2
     */
   def reset(): Unit = {
-    curves = new java.util.Vector[Curve]
+    curves = Vector.empty
     invalidateBounds()
   }
 
@@ -348,7 +347,7 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
     *         represents an empty area; `false` otherwise.
     * @since 1.2
     */
-  def isEmpty: Boolean = curves.size == 0
+  def isEmpty: Boolean = curves.isEmpty
 
   /**
     * Tests whether this `Area` consists entirely of
@@ -359,13 +358,8 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
     *         `false` otherwise.
     * @since 1.2
     */
-  def isPolygonal: Boolean = {
-    val enum_ : java.util.Enumeration[Curve] = curves.elements
-    while ( {
-      enum_.hasMoreElements
-    }) if (enum_.nextElement.getOrder > 1) return false
-    true
-  }
+  def isPolygonal: Boolean =
+    curves.forall(_.getOrder <= 1)
 
   /**
     * Tests whether this `Area` is rectangular in shape.
@@ -379,8 +373,8 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
     val size = curves.size
     if (size == 0) return true
     if (size > 3) return false
-    val c1 = curves.get(1)
-    val c2 = curves.get(2)
+    val c1 = curves(1)
+    val c2 = curves(2)
     if (c1.getOrder != 1 || c2.getOrder != 1) return false
     if (c1.getXTop != c1.getXBot || c2.getXTop != c2.getXBot) return false
     if (c1.getYTop != c2.getYTop || c1.getYBot != c2.getYBot) { // One might be able to prove that this is impossible...
@@ -403,13 +397,7 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
     */
   def isSingular: Boolean = {
     if (curves.size < 3) return true
-    val enum_ : java.util.Enumeration[Curve] = curves.elements
-    enum_.nextElement // First Order0 "moveto"
-
-    while ( {
-      enum_.hasMoreElements
-    }) if (enum_.nextElement.getOrder == 0) return false
-    true
+    curves.forall(_.getOrder != 0)
   }
 
   private var cachedBounds: Rectangle2D.Double = null
@@ -420,12 +408,13 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
   private def getCachedBounds: Rectangle2D = {
     if (cachedBounds != null) return cachedBounds
     val r = new Rectangle2D.Double
-    if (curves.size > 0) {
-      val c = curves.get(0)
+    if (curves.nonEmpty) {
+      val it = curves.iterator
+      val c = it.next()
       // First point is always an order 0 curve (moveto)
       r.setRect(c.getX0, c.getY0, 0, 0)
-      for (i <- 1 until curves.size) {
-        curves.get(i).enlarge(r)
+      while (it.hasNext) {
+        it.next().enlarge(r)
       }
     }
     cachedBounds = r
@@ -538,12 +527,7 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
     */
   override def contains(x: Double, y: Double): Boolean = {
     if (!getCachedBounds.contains(x, y)) return false
-    val enum_ : java.util.Enumeration[Curve] = curves.elements
-    var crossings = 0
-    while (enum_.hasMoreElements) {
-      val c = enum_.nextElement
-      crossings += c.crossingsFor(x, y)
-    }
+    val crossings = curves.foldLeft(0)((acc, c) => acc + c.crossingsFor(x, y))
     (crossings & 1) == 1
   }
 
@@ -604,15 +588,16 @@ class Area private (private var curves: java.util.Vector[Curve]) extends Shape w
   override def getPathIterator(at: AffineTransform, flatness: Double) = new FlatteningPathIterator(getPathIterator(at), flatness)
 }
 
-class AreaIterator(private var curves: java.util.Vector[Curve], private var transform: AffineTransform)
+class AreaIterator(private var curves: CSeq[Curve], private var transform: AffineTransform)
   extends PathIterator {
 
-  private var index     = 0
+//  private var index     = 0
 
-  private var prevcurve: Curve = null
-  private var thiscurve: Curve = null
+  private var prevCurve: Curve = null
+  private var thisCurve: Curve = null
+  private val peer = curves.iterator
 
-  if (curves.size >= 1) thiscurve = curves.get(0)
+  if (curves.nonEmpty) thisCurve = peer.next() // curves.head
 
   override def getWindingRule: Int = { // REMIND: Which is better, EVEN_ODD or NON_ZERO?
     //         The paths calculated could be classified either way.
@@ -620,53 +605,53 @@ class AreaIterator(private var curves: java.util.Vector[Curve], private var tran
     WIND_NON_ZERO
   }
 
-  override def isDone: Boolean = prevcurve == null && thiscurve == null
+  override def isDone: Boolean = prevCurve == null && thisCurve == null
 
   override def next(): Unit = {
-    if (prevcurve != null) prevcurve = null
+    if (prevCurve != null) prevCurve = null
     else {
-      prevcurve = thiscurve
-      index += 1
-      if (index < curves.size) {
-        thiscurve = curves.get(index)
-        if (thiscurve.getOrder != 0 && prevcurve.getX1 == thiscurve.getX0 && prevcurve.getY1 == thiscurve.getY0) prevcurve = null
+      prevCurve = thisCurve
+//      index += 1
+      if (peer.hasNext) {
+        thisCurve = peer.next()
+        if (thisCurve.getOrder != 0 && prevCurve.getX1 == thisCurve.getX0 && prevCurve.getY1 == thisCurve.getY0) prevCurve = null
       }
-      else thiscurve = null
+      else thisCurve = null
     }
   }
 
   override def currentSegment(coords: Array[Float]): Int = {
-    val dcoords = new Array[Double](6)
-    val segtype = currentSegment(dcoords)
-    val numpoints =
-      if      (segtype == SEG_CLOSE   ) 0
-      else if (segtype == SEG_QUADTO  ) 2
-      else if (segtype == SEG_CUBICTO ) 3
+    val dCoords = new Array[Double](6)
+    val segType = currentSegment(dCoords)
+    val numPoints =
+      if      (segType == SEG_CLOSE   ) 0
+      else if (segType == SEG_QUADTO  ) 2
+      else if (segType == SEG_CUBICTO ) 3
       else 1
 
-    for (i <- 0 until numpoints * 2) {
-      coords(i) = dcoords(i).toFloat
+    for (i <- 0 until numPoints * 2) {
+      coords(i) = dCoords(i).toFloat
     }
-    segtype
+    segType
   }
 
   override def currentSegment(coords: Array[Double]): Int = {
-    var segtype   = 0
-    var numpoints = 0
-    if (prevcurve != null) { // Need to finish off junction between curves
-      if (thiscurve == null || thiscurve.getOrder == 0) return SEG_CLOSE
-      coords(0) = thiscurve.getX0
-      coords(1) = thiscurve.getY0
-      segtype = SEG_LINETO
-      numpoints = 1
+    var segType   = 0
+    var numPoints = 0
+    if (prevCurve != null) { // Need to finish off junction between curves
+      if (thisCurve == null || thisCurve.getOrder == 0) return SEG_CLOSE
+      coords(0) = thisCurve.getX0
+      coords(1) = thisCurve.getY0
+      segType = SEG_LINETO
+      numPoints = 1
     }
-    else if (thiscurve == null) throw new NoSuchElementException("area iterator out of bounds")
+    else if (thisCurve == null) throw new NoSuchElementException("area iterator out of bounds")
     else {
-      segtype = thiscurve.getSegment(coords)
-      numpoints = thiscurve.getOrder
-      if (numpoints == 0) numpoints = 1
+      segType = thisCurve.getSegment(coords)
+      numPoints = thisCurve.getOrder
+      if (numPoints == 0) numPoints = 1
     }
-    if (transform != null) transform.transform(coords, 0, coords, 0, numpoints)
-    segtype
+    if (transform != null) transform.transform(coords, 0, coords, 0, numPoints)
+    segType
   }
 }

@@ -29,20 +29,16 @@ package de.sciss.infibrillae.geom.impl
  * questions.
  */
 
-import java.awt.geom.PathIterator
-import java.util
+import de.sciss.infibrillae.geom.PathIterator
 
+import scala.collection.{mutable, Seq => CSeq}
 
 object Crossings {
   val debug = false
 
-  def findCrossings(curves: java.util.Vector[_ <: Curve], xlo: Double, ylo: Double, xhi: Double, yhi: Double): Crossings = {
+  def findCrossings(curves: CSeq[Curve], xlo: Double, ylo: Double, xhi: Double, yhi: Double): Crossings = {
     val cross = new Crossings.EvenOdd(xlo, ylo, xhi, yhi)
-    val enum_ = curves.elements
-    while (enum_.hasMoreElements) {
-      val c = enum_.nextElement
-      if (c.accumulateCrossings(cross)) return null
-    }
+    if (curves.exists(_.accumulateCrossings(cross))) return null
     if (debug) cross.print()
     cross
   }
@@ -393,7 +389,7 @@ abstract class Crossings(private var xlo: Double, private var ylo: Double,
     false
   }
 
-  private val tmp = new util.Vector[Curve]
+  private val tmp = mutable.Buffer.empty[Curve]
 
   def accumulateQuad(x0: Double, y0: Double, coords: Array[Double]): Boolean = {
     if (y0 < ylo && coords(1) < ylo && coords(3) < ylo) return false
@@ -405,13 +401,7 @@ abstract class Crossings(private var xlo: Double, private var ylo: Double,
       return false
     }
     Curve.insertQuad(tmp, x0, y0, coords)
-    val enum_ : util.Enumeration[Curve] = tmp.elements
-    while ( {
-      enum_.hasMoreElements
-    }) {
-      val c = enum_.nextElement
-      if (c.accumulateCrossings(this)) return true
-    }
+    if (tmp.exists(_.accumulateCrossings(this))) return true
     tmp.clear()
     false
   }
@@ -426,13 +416,7 @@ abstract class Crossings(private var xlo: Double, private var ylo: Double,
       return false
     }
     Curve.insertCubic(tmp, x0, y0, coords)
-    val enum_ : util.Enumeration[Curve] = tmp.elements
-    while ( {
-      enum_.hasMoreElements
-    }) {
-      val c = enum_.nextElement
-      if (c.accumulateCrossings(this)) return true
-    }
+    if (tmp.exists(_.accumulateCrossings(this))) return true
     tmp.clear()
     false
   }

@@ -30,14 +30,14 @@ package de.sciss.infibrillae.geom.impl
  */
 
 import de.sciss.infibrillae.geom.{PathIterator, Rectangle2D}
-import de.sciss.infibrillae.geom.impl.Curve.{DECREASING, INCREASING, orderof}
+import de.sciss.infibrillae.geom.impl.Curve.{DECREASING, INCREASING, orderOf}
 
 final class Order1(protected val x0: Double, protected val y0: Double,
                    protected val x1: Double, protected val y1: Double, direction: Int)
   extends Curve(direction) {
 
-  private val xmin = if (x0 < x1) x0 else x1
-  private val xmax = if (x0 < x1) x1 else x0
+  private val xMin = if (x0 < x1) x0 else x1
+  private val xMax = if (x0 < x1) x1 else x0
 
   override def getOrder = 1
 
@@ -47,8 +47,8 @@ final class Order1(protected val x0: Double, protected val y0: Double,
   override def getXBot: Double = x1
   override def getYBot: Double = y1
 
-  override def getXMin: Double = xmin
-  override def getXMax: Double = xmax
+  override def getXMin: Double = xMin
+  override def getXMax: Double = xMax
 
   override def getX0: Double = if (direction == INCREASING) x0 else x1
   override def getY0: Double = if (direction == INCREASING) y0 else y1
@@ -98,32 +98,32 @@ final class Order1(protected val x0: Double, protected val y0: Double,
     val ylo = c.getYLo
     val xhi = c.getXHi
     val yhi = c.getYHi
-    if (xmin >= xhi) return false
-    var xstart = .0
-    var ystart = .0
-    var xend = .0
-    var yend = .0
+    if (xMin >= xhi) return false
+    var xStart  = 0.0
+    var yStart  = 0.0
+    var xEnd    = 0.0
+    var yEnd    = 0.0
     if (y0 < ylo) {
       if (y1 <= ylo) return false
-      ystart = ylo
-      xstart = XforY(ylo)
+      yStart = ylo
+      xStart = XforY(ylo)
     }
     else {
       if (y0 >= yhi) return false
-      ystart = y0
-      xstart = x0
+      yStart = y0
+      xStart = x0
     }
     if (y1 > yhi) {
-      yend = yhi
-      xend = XforY(yhi)
+      yEnd = yhi
+      xEnd = XforY(yhi)
     }
     else {
-      yend = y1
-      xend = x1
+      yEnd = y1
+      xEnd = x1
     }
-    if (xstart >= xhi && xend >= xhi) return false
-    if (xstart > xlo || xend > xlo) return true
-    c.record(ystart, yend, direction)
+    if (xStart >= xhi && xEnd >= xhi) return false
+    if (xStart > xlo || xEnd > xlo) return true
+    c.record(yStart, yEnd, direction)
     false
   }
 
@@ -132,27 +132,26 @@ final class Order1(protected val x0: Double, protected val y0: Double,
     r.add(x1, y1)
   }
 
-  override def getSubCurve(ystart: Double, yend: Double, dir: Int): Curve = {
-    if (ystart == y0 && yend == y1) return getWithDirection(dir)
-    if (x0 == x1) return new Order1(x0, ystart, x1, yend, dir)
-    val num = x0 - x1
-    val denom = y0 - y1
-    val xstart = x0 + (ystart - y0) * num / denom
-    val xend = x0 + (yend - y0) * num / denom
-    new Order1(xstart, ystart, xend, yend, dir)
+  override def getSubCurve(yStart: Double, yEnd: Double, dir: Int): Curve = {
+    if (yStart == y0 && yEnd == y1) return getWithDirection(dir)
+    if (x0 == x1) return new Order1(x0, yStart, x1, yEnd, dir)
+    val num     = x0 - x1
+    val denom   = y0 - y1
+    val xStart  = x0 + (yStart - y0) * num / denom
+    val xEnd    = x0 + (yEnd   - y0) * num / denom
+    new Order1(xStart, yStart, xEnd, yEnd, dir)
   }
 
   override def getReversedCurve = new Order1(x0, y0, x1, y1, -direction)
 
-  override def compareTo(other: Curve, yrange: Array[Double]): Int = {
-    if (!other.isInstanceOf[Order1]) return super.compareTo(other, yrange)
+  override def compareTo(other: Curve, yRange: Array[Double]): Int = {
+    if (!other.isInstanceOf[Order1]) return super.compareTo(other, yRange)
     val c1 = other.asInstanceOf[Order1]
-    if (yrange(1) <= yrange(0)) throw new InternalError("yrange already screwed up...")
-    yrange(1) = Math.min(Math.min(yrange(1), y1), c1.y1)
-    if (yrange(1) <= yrange(0)) throw new InternalError("backstepping from " + yrange(0) + " to " + yrange(1))
-    if (xmax <= c1.xmin) return if (xmin == c1.xmax) 0
-    else -1
-    if (xmin >= c1.xmax) return 1
+    if (yRange(1) <= yRange(0)) throw new InternalError("yrange already screwed up...")
+    yRange(1) = Math.min(Math.min(yRange(1), y1), c1.y1)
+    if (yRange(1) <= yRange(0)) throw new InternalError("backstepping from " + yRange(0) + " to " + yRange(1))
+    if (xMax <= c1.xMin) return if (xMin == c1.xMax) 0 else -1
+    if (xMin >= c1.xMax) return 1
     /*
              * If "this" is curve A and "other" is curve B, then...
              * xA(y) = x0A + (y - y0A) (x1A - x0A) / (y1A - y0A)
@@ -190,17 +189,17 @@ final class Order1(protected val x0: Double, protected val y0: Double,
     val dxb = c1.x1 - c1.x0
     val dyb = c1.y1 - c1.y0
     val denom = dxb * dya - dxa * dyb
-    var y = .0
+    var y = 0.0
     if (denom != 0) {
       val num = (x0 - c1.x0) * dya * dyb - y0 * dxa * dyb + c1.y0 * dxb * dya
       y = num / denom
-      if (y <= yrange(0)) { // intersection is above us
+      if (y <= yRange(0)) { // intersection is above us
         // Use bottom-most common y for comparison
         y = Math.min(y1, c1.y1)
       }
       else { // intersection is below the top of our range
-        if (y < yrange(1)) { // If intersection is in our range, adjust valid range
-          yrange(1) = y
+        if (y < yRange(1)) { // If intersection is in our range, adjust valid range
+          yRange(1) = y
         }
         // Use top-most common y for comparison
         y = Math.max(y0, c1.y0)
@@ -211,7 +210,7 @@ final class Order1(protected val x0: Double, protected val y0: Double,
       // (see shortcuts in Order1.XforY())
       y = Math.max(y0, c1.y0)
     }
-    orderof(XforY(y), c1.XforY(y))
+    orderOf(XforY(y), c1.XforY(y))
   }
 
   override def getSegment(coords: Array[Double]): Int = {

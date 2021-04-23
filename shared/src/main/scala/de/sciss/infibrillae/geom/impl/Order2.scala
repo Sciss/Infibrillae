@@ -29,16 +29,16 @@ package de.sciss.infibrillae.geom.impl
  * questions.
  */
 
-import de.sciss.infibrillae.geom.{PathIterator, Rectangle2D}
 import de.sciss.infibrillae.geom.impl.Curve.{DECREASING, INCREASING, round}
+import de.sciss.infibrillae.geom.{PathIterator, Rectangle2D}
 
-import java.util
+import scala.collection.mutable
 
 object Order2 {
-  def insert(curves: util.Vector[Curve], tmp: Array[Double], x0: Double, y0: Double, cx0: Double, cy0: Double,
+  def insert(curves: mutable.Growable[Curve], tmp: Array[Double], x0: Double, y0: Double, cx0: Double, cy0: Double,
              x1: Double, y1: Double, direction: Int): Unit = {
-    val numparams = getHorizontalParams(y0, cy0, y1, tmp)
-    if (numparams == 0) { // We are using addInstance here to avoid inserting horisontal
+    val numParams = getHorizontalParams(y0, cy0, y1, tmp)
+    if (numParams == 0) { // We are using addInstance here to avoid inserting horisontal
       // segments
       addInstance(curves, x0, y0, cx0, cy0, x1, y1, direction)
       return
@@ -59,9 +59,10 @@ object Order2 {
     addInstance(curves, tmp(i1), tmp(i1 + 1), tmp(i1 + 2), tmp(i1 + 3), tmp(i1 + 4), tmp(i1 + 5), direction)
   }
 
-  def addInstance(curves: util.Vector[Curve], x0: Double, y0: Double, cx0: Double, cy0: Double, x1: Double, y1: Double, direction: Int): Unit = {
-    if (y0 > y1) curves.add(new Order2(x1, y1, cx0, cy0, x0, y0, -direction))
-    else if (y1 > y0) curves.add(new Order2(x0, y0, cx0, cy0, x1, y1, direction))
+  def addInstance(curves: mutable.Growable[Curve], x0: Double, y0: Double, cx0: Double, cy0: Double,
+                  x1: Double, y1: Double, direction: Int): Unit = {
+    if      (y0 > y1) curves.addOne(new Order2(x1, y1, cx0, cy0, x0, y0, -direction))
+    else if (y1 > y0) curves.addOne(new Order2(x0, y0, cx0, cy0, x1, y1, direction))
   }
 
   /*
