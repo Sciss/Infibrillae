@@ -390,14 +390,29 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     }
 
     if (numPlaced < minWords) {
-      val a = new Area(polyShape)
-      a.intersect(new Area(new Rectangle2D.Double(tx, ty, canvasW, canvasH)))
-      val pi = Random.nextInt(poem.length)
-      val pb = poemBoxes(pi)
-      val rx = Random.nextInt(canvasW - pb.width ) + tx
-      val ry = Random.nextInt(canvasH - pb.height) + ty
-      if (a.contains(new Rectangle2D.Double(rx, ry, pb.width, pb.height))) {
-        val p = placed(numPlaced)
+      val pi  = Random.nextInt(poem.length)
+      val pb  = poemBoxes(pi)
+      val rx  = Random.nextInt(canvasW - pb.width ) + tx
+      val ry  = Random.nextInt(canvasH - pb.height) + ty
+      val p   = placed(numPlaced)
+//      p.r.setRect(pb.x, pb.y, pb.width, pb.height)
+      p.r.setRect(rx /*+ pb.x*/, ry /*+ pb.y*/, pb.width, pb.height)
+      var collides = false
+      var i = 0
+      while (!collides && i < numPlaced) {
+        val q   = placed(i)
+        val qb  = q.r
+        if (p.r.intersects(q.x + qb.getX, q.y + qb.getY, qb.getWidth, qb.getHeight)) {
+//          println(s"${p.r} collides with $q at index $i")
+          collides = true
+        }
+        i += 1
+      }
+      if (!collides && {
+        val a = new Area(polyShape)
+        a.intersect(new Area(new Rectangle2D.Double(tx, ty, canvasW, canvasH)))
+        a.contains(p.r)
+      }) {
         p.s   = poem(pi)
         p.r.setRect(pb.x, pb.y, pb.width, pb.height)
         p.x   = rx - pb.x
