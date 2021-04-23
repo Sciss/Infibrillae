@@ -57,7 +57,11 @@ class AWTGraphics2D(_peer: java.awt.Graphics2D) extends Graphics2D {
         val g8    = (g4 << 4) | g4
         val b8    = (b4 << 4) | b4
         val rgb8  = (r8 << 16) | (g8 << 8) | b8
-        val c  = new java.awt.Color(rgb8)
+        val c = new java.awt.Color(rgb8)
+        peer.setColor(c)
+
+      case Color.ARGB8(argb8) =>
+        val c = new java.awt.Color(argb8, true)
         peer.setColor(c)
     }
   }

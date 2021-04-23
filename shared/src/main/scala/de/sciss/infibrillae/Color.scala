@@ -25,6 +25,15 @@ object Color {
 
     override def cssString: String = _cssString
   }
+
+  final case class ARGB8(value: Int) extends Color {
+    private lazy val _cssString = {
+      val h = ((value.toLong & 0xFFFFFFFF) | 0x100000000L).toHexString
+      s"#${h.substring(h.length - 3)}"
+    }
+
+    override def cssString: String = _cssString
+  }
 }
 sealed trait Color {
   def cssString: String

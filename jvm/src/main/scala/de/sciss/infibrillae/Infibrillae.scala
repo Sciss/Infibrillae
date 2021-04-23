@@ -40,13 +40,13 @@ object Infibrillae {
 
   private var visualOpt = Option.empty[Visual[AWTGraphics2D]]
 
-  case class Palabra(s: String, x: Double, y: Double)
+//  case class Palabra(s: String, x: Double, y: Double)
 
-  val palabras = Seq(
-    Palabra("phantom limb", 104.0, 100.0),
-    Palabra("fata morgana", 104.0, 100.0),
-    Palabra("nystagmus"   , 120.0, 100.0),
-  )
+//  val palabras = Seq(
+//    Palabra("phantom limb", 104.0, 100.0),
+//    Palabra("fata morgana", 104.0, 100.0),
+//    Palabra("nystagmus"   , 120.0, 100.0),
+//  )
 
 //  val speeds = Seq(
 //    0.005,
@@ -167,8 +167,8 @@ object Infibrillae {
                   Visual(server, canvas, idx = SPACE_IDX).onComplete {
                     case Success(v) =>
                       println("Visual ready.")
-                      val Palabra(txt, txtX, txtY) = palabras(SPACE_IDX)
-                      v.setText(txt, txtX, txtY)
+//                      val Palabra(txt, txtX, txtY) = palabras(SPACE_IDX)
+//                      v.setText(txt, txtX, txtY)
                       visualOpt = Some(v)
 
                     case Failure(ex) =>

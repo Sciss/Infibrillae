@@ -13,6 +13,7 @@
 
 package de.sciss.infibrillae
 
+import de.sciss.infibrillae.Visual.Word
 import de.sciss.infibrillae.geom.{Area, Path2D, Rectangle2D, Shape}
 import de.sciss.lucre.synth.Executor.executionContext
 import de.sciss.lucre.synth.Server
@@ -22,6 +23,7 @@ import de.sciss.synth.message
 
 import scala.concurrent.Future
 import scala.math.{Pi, min}
+import scala.util.Random
 import scala.util.control.NonFatal
 
 object Visual extends VisualPlatform {
@@ -149,7 +151,7 @@ object Visual extends VisualPlatform {
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
       new Visual(img1, img2, server, canvas, speed = speed, poem = poem.toArray, poemBoxes = poemBoxes.toArray,
-        poly = poly.toArray)
+        poly = poly.toArray, minWords = 6, maxWords = 10)
     }
   }
 
@@ -181,10 +183,17 @@ object Visual extends VisualPlatform {
     if (recording) {
       recFramesB += new RecFrame(time = System.currentTimeMillis(), trunkX = trunkX, trunkY = trunkY)
     }
+
+  final class Word(var s: String, val r: Rectangle2D, var x: Double, var y: Double, var vx: Double, var vy: Double) {
+    def halt(): Unit = {
+      vx = 0.0
+      vy = 0.0
+    }
+  }
 }
 class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx],
                                         speed: Double, poem: Array[String], poemBoxes: Array[IRect2D],
-                                        poly: Array[(Float, Float)]) {
+                                        poly: Array[(Float, Float)], minWords: Int, maxWords: Int) {
   private val canvasW   = canvas.width
   private val canvasWH  = canvasW / 2
   private val canvasH   = canvas.height
@@ -201,17 +210,14 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private val polyColor1: Color = Color.RGB4(0xF00)
   private val polyColor2: Color = Color.RGB4(0xFF0)
   private var textColor: Color  = Color.RGB4(0xCCC)
-  private var palabra   = "in|fibrillae"
-  private var palabraX  = 100.0
-  private var palabraY  = 100.0
+//  private var palabra   = "in|fibrillae"
+//  private var palabraX  = 100.0
+//  private var palabraY  = 100.0
   private var mouseX    = -1
   private var mouseY    = -1
 
-  private var placedIdx = -1
-  private var placedX   = 0.0
-  private var placedY   = 0.0
-  private var placedVx  = 0.0
-  private var placedVy  = 0.0
+  private var numPlaced = 0
+  private val placed    = Array.fill(maxWords)(new Word("", new Rectangle2D.Double, 0.0, 0.0, 0.0, 0.0))
 
   private val polyShape: Shape = {
     val res = new Path2D.Double
@@ -231,12 +237,12 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     repaint()
   }
 
-  def setText(s: String, x: Double, y: Double): Unit = {
-    palabra   = s
-    palabraX  = x
-    palabraY  = y
-//    repaint()
-  }
+//  def setText(s: String, x: Double, y: Double): Unit = {
+//    palabra   = s
+//    palabraX  = x
+//    palabraY  = y
+////    repaint()
+//  }
 
   def setTextColor(name: String): Unit = {
     textColor = Color.parse(name)
@@ -335,70 +341,72 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 //      ctx.fillText(poem(pi), sx, sy)
 //    }
 
-    if (placedIdx >= 0) {
-      val s   = poem(placedIdx)
-      val pb  = poemBoxes(placedIdx)
+    var placedIdx = 0
+    while (placedIdx < numPlaced) {
+      val p   = placed(placedIdx)
+      val pb  = p.r // poemBoxes(placedIdx)
       val pT  = dt * 0.005
       val fr  = 1.0 - (dt * 0.001)
       val pS  = 1.0 - pT
       val vis = {
-        val px0 = placedX - tx + pb.x
-        (px0 < canvasW) && (px0 + pb.width > 0.0) && {
-          val py0 = placedY - ty + pb.y
-          (py0 < canvasH) && (py0 + pb.height > 0.0)
+        val px0 = p.x - tx + pb.getX
+        (px0 < canvasW) && (px0 + pb.getWidth > 0.0) && {
+          val py0 = p.y - ty + pb.getY
+          (py0 < canvasH) && (py0 + pb.getHeight > 0.0)
         }
       }
       if (vis) {
         val inside = {
-          val px0 = placedX - tx + pb.x
-          (px0 >= 0.0) && (px0 + pb.width <= canvasW) && {
-            val py0 = placedY - ty + pb.y
-            (py0 >= 0.0) && (py0 + pb.height <= canvasH)
+          val px0 = p.x - tx + pb.getX
+          (px0 >= 0.0) && (px0 + pb.getWidth <= canvasW) && {
+            val py0 = p.y - ty + pb.getY
+            (py0 >= 0.0) && (py0 + pb.getHeight <= canvasH)
           }
         }
         if (inside) {
-          placedVx = (placedVx * pS + dx * pT) * fr
-          placedVy = (placedVy * pS + dy * pT) * fr
+          p.vx = (p.vx * pS + dx * pT) * fr
+          p.vy = (p.vy * pS + dy * pT) * fr
         } else {
-          placedVx = placedVx * pS
-          placedVy = placedVy * pS
+          p.vx *= pS
+          p.vy *= pS
         }
-        val sx   = placedX + placedVx
-        val sy   = placedY + placedVy
-        if (polyShape.contains(pb.x + sx, pb.y + sy, pb.width, pb.height)) {
-          placedX = sx
-          placedY = sy
+        val sx   = p.x + p.vx
+        val sy   = p.y + p.vy
+        if (polyShape.contains(pb.getX + sx, pb.getY + sy, pb.getWidth, pb.getHeight)) {
+          p.x = sx
+          p.y = sy
         } else {
-          placedVx = 0.0
-          placedVy = 0.0
+          p.vx = 0.0
+          p.vy = 0.0
         }
         ctx.fillStyle = textColor
-        ctx.fillText(s, placedX - tx, placedY - ty)
+        ctx.fillText(p.s, p.x - tx, p.y - ty)
       } else {
-        placedVx = placedVx * pS
-        placedVy = placedVy * pS
+        p.vx *= pS
+        p.vy *= pS
       }
 
-    } else {
-      val a = new Area(polyShape)
-      a.intersect(new Area(new Rectangle2D.Double(tx, ty, canvasW, canvasH)))
-      val pi = util.Random.nextInt(poem.length)
-      val pb = poemBoxes(pi)
-      val rx = util.Random.nextInt(canvasW - pb.width ) + tx
-      val ry = util.Random.nextInt(canvasH - pb.height) + ty
-      if (a.contains(new Rectangle2D.Double(rx, ry, pb.width, pb.height))) {
-        placedIdx = pi
-        placedX   = rx - pb.x
-        placedY   = ry - pb.y
-        placedVx  = 0.0
-        placedVy  = 0.0
-      }
+      placedIdx += 1
     }
 
-//    ctx.fillText("disappearing" , 120.0, 122.0)
-//    ctx.fillText("vacuum"       , 110.0,  50.0)
-//    ctx.fillText("something"    ,  70.0, 350.0)
-//    ctx.fillText("desired"      , 230.0, 280.0)
+    if (numPlaced < minWords) {
+      val a = new Area(polyShape)
+      a.intersect(new Area(new Rectangle2D.Double(tx, ty, canvasW, canvasH)))
+      val pi = Random.nextInt(poem.length)
+      val pb = poemBoxes(pi)
+      val rx = Random.nextInt(canvasW - pb.width ) + tx
+      val ry = Random.nextInt(canvasH - pb.height) + ty
+      if (a.contains(new Rectangle2D.Double(rx, ry, pb.width, pb.height))) {
+        val p = placed(numPlaced)
+        p.s   = poem(pi)
+        p.r.setRect(pb.x, pb.y, pb.width, pb.height)
+        p.x   = rx - pb.x
+        p.y   = ry - pb.y
+        p.vx  = 0.0
+        p.vy  = 0.0
+        numPlaced += 1
+      }
+    }
 
     ctx.composite = composite //  "color-burn"
 //    ctx.drawImage(img2, 0.0, 0.0)

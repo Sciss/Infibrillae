@@ -79,10 +79,10 @@ object Infibrillae {
     visualOpt.foreach(_.setTextColor(code))
   }
 
-  @JSExportTopLevel("setText")
-  def setText(s: String, x: Double, y: Double): Unit = {
-    visualOpt.foreach(_.setText(s, x, y))
-  }
+//  @JSExportTopLevel("setText")
+//  def setText(s: String, x: Double, y: Double): Unit = {
+//    visualOpt.foreach(_.setText(s, x, y))
+//  }
 
   @JSExportTopLevel("dumpOSC")
   def dumpOSC(code: Int = 1): Unit =
