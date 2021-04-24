@@ -22,7 +22,7 @@ import de.sciss.synth.UGenSource.Vec
 import de.sciss.synth.message
 
 import scala.concurrent.Future
-import scala.math.{Pi, min}
+import scala.math.{Pi, min, atan2}
 import scala.util.Random
 import scala.util.control.NonFatal
 
@@ -251,7 +251,8 @@ object Visual extends VisualPlatform {
     }
   }
 }
-class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx],
+class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[Ctx], server: Server,
+                                        canvas: Canvas[Ctx],
                                         speed: Double, poem: Array[String], poemBoxes: Array[IRect2D],
                                         poly: Array[(Float, Float)], minWords: Int, maxWords: Int,
                                         sensors: Array[Sensor]) {
@@ -261,8 +262,8 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private val canvasHH  = canvasH / 2
   private val trunkMinX = canvasWH
   private val trunkMinY = canvasHH
-  private val trunkMaxX = img1.width  - canvasWH
-  private val trunkMaxY = img1.height - canvasHH
+  private val trunkMaxX = imgTrunk.width  - canvasWH
+  private val trunkMaxY = imgTrunk.height - canvasHH
   private var trunkX    = 570.0.clip(trunkMinX, trunkMaxX) // 0.0
   private var trunkY    = 180.0.clip(trunkMinY, trunkMaxY) // 0.0
   private var trunkTgtX = trunkX
@@ -324,7 +325,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private def sendTrunkXY(): Unit = {
     val xr  = trunkX.linLin(trunkMinX, trunkMaxX, -1, 1)
     val yr  = trunkY.linLin(trunkMinY, trunkMaxY, -1, 1)
-    val a   = math.atan2(yr, xr)
+    val a   = atan2(yr, xr)
     val idx = a.linLin(-Pi, +Pi, 0.0, 4.0)
     if (sentIdx != idx) try {
       sentIdx = idx
@@ -373,7 +374,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     ctx.composite = Composite.SourceOver
     val tx = trunkX - trunkMinX
     val ty = trunkY - trunkMinY
-    img1.draw(ctx, -tx, -ty)
+    imgTrunk.draw(ctx, -tx, -ty)
 
 //    ctx.translate(-tx, -ty)
 //    ctx.fillStyle = polyColor1
@@ -514,7 +515,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 
     ctx.composite = composite //  "color-burn"
 //    ctx.drawImage(img2, 0.0, 0.0)
-    img2.draw(ctx, 0.0, 0.0)
+    imgFilter.draw(ctx, 0.0, 0.0)
   }
 
   private var dragActive  = false
