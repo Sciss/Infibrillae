@@ -74,10 +74,10 @@ object Infibrillae {
     visualOpt.foreach(_.setComposite(code))
   }
 
-  @JSExportTopLevel("setTextColor")
-  def setTextColor(code: String): Unit = {
-    visualOpt.foreach(_.setTextColor(code))
-  }
+//  @JSExportTopLevel("setTextColor")
+//  def setTextColor(code: String): Unit = {
+//    visualOpt.foreach(_.setTextColor(code))
+//  }
 
 //  @JSExportTopLevel("setText")
 //  def setText(s: String, x: Double, y: Double): Unit = {

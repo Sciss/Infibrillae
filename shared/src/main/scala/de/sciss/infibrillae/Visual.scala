@@ -155,7 +155,6 @@ object Visual extends VisualPlatform {
     }
   }
 
-
   private var _recording = false
 
   def recording: Boolean = _recording
@@ -188,7 +187,7 @@ object Visual extends VisualPlatform {
   private val textColorT: Color = Color.ARGB8(0x00CCCCCC)
 
   final class Word {
-    var s: String   = ""
+    var s: String       = ""
     val r: Rectangle2D  = new Rectangle2D.Double
 
     var x : Double  = 0.0
@@ -200,22 +199,22 @@ object Visual extends VisualPlatform {
     private var fadeStart : Double  = 0.0
     private var fadeStop  : Double  = 0.0
 
-    def color(time: Double): Color = fadeState match {
+    def color(timeStamp: Double): Color = fadeState match {
       case 0 => textColor
       case 1 => // in
-        if (time > fadeStop) {
+        if (timeStamp > fadeStop) {
           fadeState = 0
           textColor
         } else {
-          val a = time.linLin(fadeStart, fadeStop, 0, 255).toInt
+          val a = timeStamp.linLin(fadeStart, fadeStop, 0, 255).toInt
           Color.ARGB8(0x00CCCCCC | (a << 24))
         }
       case 2 => // out
-        if (time > fadeStop) {
+        if (timeStamp > fadeStop) {
           fadeState = 3
           textColorT
         } else {
-          val a = time.linLin(fadeStart, fadeStop, 255, 0).toInt
+          val a = timeStamp.linLin(fadeStart, fadeStop, 255, 0).toInt
           Color.ARGB8(0x00CCCCCC | (a << 24))
         }
       case 3 => textColorT
@@ -223,16 +222,16 @@ object Visual extends VisualPlatform {
 
     def shouldRemove: Boolean = fadeState == 3
 
-    def fadeIn(time: Double, dur: Double = 2.0): Unit = {
+    def fadeIn(timeStamp: Double, dur: Double = 2.0): Unit = {
       fadeState = 1
-      fadeStart = time
-      fadeStop  = time + dur * 1000
+      fadeStart = timeStamp
+      fadeStop  = timeStamp + dur * 1000
     }
 
-    def fadeOut(time: Double, dur: Double = 2.0): Unit = {
+    def fadeOut(timeStamp: Double, dur: Double = 2.0): Unit = {
       fadeState = 2
-      fadeStart = time
-      fadeStop  = time + dur * 1000
+      fadeStart = timeStamp
+      fadeStop  = timeStamp + dur * 1000
     }
 
     def halt(): Unit = {
@@ -257,13 +256,16 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private var trunkTgtX = trunkX
   private var trunkTgtY = trunkY
   private var composite: Composite = Composite.ColorBurn
-  private val polyColor1: Color = Color.RGB4(0xF00)
-  private val polyColor2: Color = Color.RGB4(0xFF0)
+//  private val polyColor1: Color = Color.RGB4(0xF00)
+//  private val polyColor2: Color = Color.RGB4(0xFF0)
   private var mouseX    = -1
   private var mouseY    = -1
 
+  private val poemIndices = poem.indices.toArray
   private var numPlaced = 0
   private val placed    = Array.fill(maxWords)(new Word)
+  private var placeTime = 0.0
+  private var placeOp   = 0   // 0 nada, 1 insert, 2 remove
 
   private val polyShape: Shape = {
     val res = new Path2D.Double
@@ -361,34 +363,10 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     trunkX  = trunkX1
     trunkY  = trunkY1
 
-    //  ctx.fillStyle = "green"
-    //  ctx.fillRect(10, 10, 150, 100)
     ctx.composite = Composite.SourceOver
     val tx = trunkX - trunkMinX
     val ty = trunkY - trunkMinY
-//    ctx.drawImage(img1, -tx, -ty)
     img1.draw(ctx, -tx, -ty)
-
-//    val inside    = polyShape.contains(mouseX + tx, mouseY + ty)
-
-//    val inside    = polyShape.contains(mouseX + tx - 20, mouseY + ty - 20, 40.0, 40.0)
-//    ctx.fillStyle = if (inside) polyColor2 else polyColor1
-//    ctx.translate(-tx, -ty)
-//    ctx.fillShape(polyShape)
-//    ctx.translate(tx, ty)
-
-//    ctx.fillText(palabra, palabraX, palabraY)
-
-    //    for (pi <- 0 until 4) {
-//      val sx = 120.0
-//      val sy = 50 + pi * 50
-//      ctx.fillStyle = polyColor2
-//      val ri = poemBoxes(pi)
-//      val r = new Rectangle2D.Double(ri.x + sx, ri.y + sy, ri.width, ri.height)
-//      ctx.fillShape(r)
-//      ctx.fillStyle = textColor
-//      ctx.fillText(poem(pi), sx, sy)
-//    }
 
     var placedIdx = 0
     while (placedIdx < numPlaced) {
@@ -443,8 +421,17 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
           p.vx = 0.0
           p.vy = 0.0
         }
-        ctx.fillStyle = p.color(animTime) // textColor
-        ctx.fillText(p.s, p.x - tx, p.y - ty)
+        ctx.fillStyle = p.color(animTime)
+        if (p.shouldRemove) {
+          placed(placedIdx) = placed(numPlaced - 1)
+          placed(numPlaced - 1) = p
+          numPlaced -= 1
+          placedIdx -= 1  // "repeat" index
+
+        } else {
+          ctx.fillText(p.s, p.x - tx, p.y - ty)
+        }
+
       } else {
         p.vx *= pS
         p.vy *= pS
@@ -453,8 +440,15 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
       placedIdx += 1
     }
 
-    if (numPlaced < minWords) {
-      val pi  = Random.nextInt(poem.length)
+    if (placeOp == 0 && placeTime < animTime) {
+      placeOp   = if (numPlaced < minWords) 1 else if (numPlaced == maxWords) 2 else Random.nextInt(2) + 1
+      // note: should be larger than fade-time, otherwise we need additional logic
+      placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
+    }
+
+    if (placeOp == 1) {
+      val pii = Random.nextInt(poem.length - numPlaced)
+      val pi  = poemIndices(pii)
       val pb  = poemBoxes(pi)
       val rx  = Random.nextInt(canvasW - pb.width ) + tx
       val ry  = Random.nextInt(canvasH - pb.height) + ty
@@ -484,9 +478,21 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
         p.y   = ry - pb.y
         p.vx  = 0.0
         p.vy  = 0.0
-        p.fadeIn(animTime)
+        val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+        p.fadeIn(animTime, dur = fdt)
+        // now swap with end to avoid duplicate choices
         numPlaced += 1
+        val piiS = poem.length - numPlaced
+        poemIndices(pii)  = poemIndices(piiS)
+        poemIndices(piiS) = pi
+        placeOp = 0
       }
+    }
+    else if (placeOp == 2) {
+      val pi = Random.nextInt(numPlaced)
+      val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+      placed(pi).fadeOut(animTime, dur = fdt)
+      placeOp = 0
     }
 
     ctx.composite = composite //  "color-burn"

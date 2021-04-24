@@ -20,7 +20,7 @@ object Color {
   final case class RGB4(value: Int) extends Color {
     private lazy val _cssString = {
       val h = ((value & 0xFFF) | 0x1000).toHexString
-      s"#${h.substring(h.length - 3)}"
+      s"#${h.substring(1)}"
     }
 
     override def cssString: String = _cssString
@@ -28,8 +28,9 @@ object Color {
 
   final case class ARGB8(value: Int) extends Color {
     private lazy val _cssString = {
-      val h = ((value.toLong & 0xFFFFFFFF) | 0x100000000L).toHexString
-      s"#${h.substring(h.length - 3)}"
+      val rgba = (value << 8) | (value >>> 24)
+      val h = (rgba & 0xFFFFFFFFL | 0x100000000L).toHexString
+      s"#${h.substring(1)}"
     }
 
     override def cssString: String = _cssString
