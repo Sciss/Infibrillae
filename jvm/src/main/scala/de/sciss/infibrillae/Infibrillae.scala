@@ -16,10 +16,12 @@ package de.sciss.infibrillae
 import de.sciss.file._
 import de.sciss.lucre.synth.Executor
 import de.sciss.numbers.Implicits.doubleNumberWrapper
+import de.sciss.osc
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 
 import java.awt.image.BufferedImage
 import java.awt.{BorderLayout, Cursor, EventQueue, Point, Toolkit}
+import java.net.InetSocketAddress
 import java.text.SimpleDateFormat
 import java.util.{Date, Locale}
 import javax.swing.{BorderFactory, JComponent, JFrame, JPanel, WindowConstants}
@@ -29,7 +31,7 @@ import scala.util.{Failure, Success}
 
 object Infibrillae {
   def main(args: Array[String]): Unit =
-    run()
+    runConnect()
 
   type S = Durable
   type T = Durable.Txn
@@ -58,7 +60,42 @@ object Infibrillae {
     11, 13, 15
   )
 
-  def run(): Unit = {
+  def runConnect(): Unit = {
+    EventQueue.invokeLater { () =>
+      println("Workspace loaded.")
+      val canvas = new AWTCanvas
+      val canvasPeer: JComponent = canvas.peer
+      canvasPeer.setPreferredSize(new Dimension(400, 400))
+      canvasPeer.setOpaque(true)
+      canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
+      val p  = new JPanel(new BorderLayout())
+      val p1 = new JPanel(new BorderLayout())
+      p1.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40))
+      p1.add(canvasPeer         , BorderLayout.CENTER )
+      p .add(p1                 , BorderLayout.CENTER )
+      val fr = new JFrame("in|fibrillae")
+      fr.setContentPane(p)
+      fr.pack()
+      fr.setLocationRelativeTo(null)
+      fr.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+      fr.setVisible(true)
+
+      import Executor.executionContext
+
+      val t = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", 57120))
+      t.connect()
+      Visual(t /*server*/, canvas, idx = SPACE_IDX).onComplete {
+        case Success(v) =>
+          println("Visual ready.")
+          visualOpt = Some(v)
+
+        case Failure(ex) =>
+          ex.printStackTrace()
+      }
+    }
+  }
+
+  def runBoot(): Unit = {
 
     SoundProcesses.init()
     Widget        .init()
@@ -164,7 +201,7 @@ object Infibrillae {
             universe.auralSystem.reactNow { implicit tx => {
               case AuralSystem.Running(server) =>
                 tx.afterCommit {
-                  Visual(server, canvas, idx = SPACE_IDX).onComplete {
+                  Visual(??? /*server*/, canvas, idx = SPACE_IDX).onComplete {
                     case Success(v) =>
                       println("Visual ready.")
 //                      val Palabra(txt, txtX, txtY) = palabras(SPACE_IDX)

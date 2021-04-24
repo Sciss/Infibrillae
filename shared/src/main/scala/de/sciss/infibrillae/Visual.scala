@@ -18,11 +18,12 @@ import de.sciss.infibrillae.geom.{Area, Ellipse2D, Path2D, Rectangle2D, Shape}
 import de.sciss.lucre.synth.Executor.executionContext
 import de.sciss.lucre.synth.Server
 import de.sciss.numbers.Implicits._
+import de.sciss.osc
 import de.sciss.synth.UGenSource.Vec
 import de.sciss.synth.message
 
 import scala.concurrent.Future
-import scala.math.{Pi, min, atan2}
+import scala.math.{Pi, atan2, min}
 import scala.util.Random
 import scala.util.control.NonFatal
 
@@ -146,7 +147,7 @@ object Visual extends VisualPlatform {
     ),
   )
 
-  def apply(server: Server, canvas: Canvas[Ctx], idx: Int): Future[Visual[Ctx]] = {
+  def apply(client: osc.Transmitter.Directed, canvas: Canvas[Ctx], idx: Int): Future[Visual[Ctx]] = {
     val (nameTrunk, nameFibre) = trunkNameSq(idx)
     val poem      = poemSq(idx)
     val poemBoxes = poemBoxesSq(idx)
@@ -161,7 +162,7 @@ object Visual extends VisualPlatform {
 //      t.connect()
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-      new Visual(img1, img2, server, canvas, speed = speed, poem = poem.toArray, poemBoxes = poemBoxes.toArray,
+      new Visual(img1, img2, client, canvas, speed = speed, poem = poem.toArray, poemBoxes = poemBoxes.toArray,
         poly = poly.toArray, minWords = 6, maxWords = 10, sensors = sensors.toArray)
     }
   }
@@ -251,7 +252,8 @@ object Visual extends VisualPlatform {
     }
   }
 }
-class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[Ctx], server: Server,
+class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[Ctx],
+                                        client: osc.Transmitter.Directed,
                                         canvas: Canvas[Ctx],
                                         speed: Double, poem: Array[String], poemBoxes: Array[IRect2D],
                                         poly: Array[(Float, Float)], minWords: Int, maxWords: Int,
@@ -283,7 +285,7 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
 
   private val sensorShapes  = sensors.map { s =>
     val res = new Ellipse2D.Double(s.cx - s.r, s.cy - s.r, s.r * 2, s.r * 2)
-    println(res)
+//    println(res)
     res
   }
 
@@ -333,9 +335,11 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
 //        trns.connect()
 //      }
 //      trns ! message.ControlBusSet(10 -> idx)
-      server.peer ! message.ControlBusSet(10 -> idx)
+      client /*server.peer*/ ! osc.Message("/pan", idx.toFloat) // message.ControlBusSet(10 -> idx)
+
     } catch {
-      case NonFatal(_) =>
+      case NonFatal(ex) =>
+        ex.printStackTrace()
     }
 
     // repaint()   // requestAnimationFrame?

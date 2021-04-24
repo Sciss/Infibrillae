@@ -148,7 +148,9 @@ object Infibrillae {
           universe.auralSystem.reactNow { implicit tx => {
             case AuralSystem.Running(server) =>
               tx.afterCommit {
-                Visual(server, canvas, idx = SPACE_IDX).onComplete {
+                val t = osc.Browser.Transmitter(osc.Browser.Address(57120))
+                t.connect()
+                Visual(t, canvas, idx = SPACE_IDX).onComplete {
                   case Success(v) =>
                     println("Visual ready.")
                     visualOpt = Some(v)
