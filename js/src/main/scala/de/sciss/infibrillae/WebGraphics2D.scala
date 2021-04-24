@@ -59,19 +59,19 @@ class WebGraphics2D(_peer: CanvasRenderingContext2D) extends Graphics2D {
     val c = pathCoords
     _peer.beginPath()
     while (!it.isDone) {
-      it.next()
       (it.currentSegment(c): @switch) match {
         case PathIterator.SEG_MOVETO =>
           _peer.moveTo(c(0), c(1))
         case PathIterator.SEG_LINETO =>
           _peer.lineTo(c(0), c(1))
         case PathIterator.SEG_QUADTO =>
-          _peer.quadraticCurveTo(c(2), c(3), c(0), c(1))
+          _peer.quadraticCurveTo(c(0), c(1), c(2), c(3))
         case PathIterator.SEG_CUBICTO =>
-          _peer.bezierCurveTo(c(2), c(3), c(4), c(5), c(0), c(1))
+          _peer.bezierCurveTo(c(0), c(1), c(2), c(3), c(4), c(5))
         case PathIterator.SEG_CLOSE =>
           _peer.closePath()
       }
+      it.next()
     }
     _peer.fill()
   }

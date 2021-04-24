@@ -8,12 +8,12 @@ lazy val deps = new {
     val dom             = "1.1.0"
 //    val fscape          = "3.6.0-SNAPSHOT"
     val jhlabs          = "2.0.235"
-    val laminar         = "0.11.0"
-    val lucre           = "4.4.3"
-    val lucreSwing      = "2.6.2"
+    val laminar         = "0.11.0" // "0.12.2"
+    val lucre           = "4.4.4"
+    val lucreSwing      = "2.6.3"
 //    val plotly          = "0.8.1"
-    val scalaJavaTime   = "2.2.0"
-    val soundProcesses  = "4.7.0"
+    val scalaJavaTime   = "2.2.2"
+    val soundProcesses  = "4.7.3"
   }
 }
 

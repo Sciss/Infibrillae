@@ -13,8 +13,8 @@
 
 package de.sciss.infibrillae
 
-import de.sciss.infibrillae.Visual.Word
-import de.sciss.infibrillae.geom.{Area, Path2D, Rectangle2D, Shape}
+import de.sciss.infibrillae.Visual.{Sensor, Word}
+import de.sciss.infibrillae.geom.{Area, Ellipse2D, Path2D, Rectangle2D, Shape}
 import de.sciss.lucre.synth.Executor.executionContext
 import de.sciss.lucre.synth.Server
 import de.sciss.numbers.Implicits._
@@ -136,12 +136,23 @@ object Visual extends VisualPlatform {
     )
   )
 
+  // defined by a circle region
+  case class Sensor(cx: Int, cy: Int, r: Int)
+
+  private val sensorsSq: Seq[Vec[Sensor]] = Seq(
+    Vector(
+      Sensor(765,869,200), Sensor(1162,963,200), Sensor(1268,1663,200), Sensor(945,1335,200),
+      Sensor(346,593,324), Sensor(1592,745,324), Sensor(1598,2030,324), Sensor(609,1690,324),
+    ),
+  )
+
   def apply(server: Server, canvas: Canvas[Ctx], idx: Int): Future[Visual[Ctx]] = {
     val (nameTrunk, nameFibre) = trunkNameSq(idx)
     val poem      = poemSq(idx)
     val poemBoxes = poemBoxesSq(idx)
     val speed     = speedSq(idx)
     val poly      = polySq(idx)
+    val sensors   = sensorsSq(idx)
     for {
       img1 <- loadImage(nameTrunk)
       img2 <- loadImage(nameFibre)
@@ -151,7 +162,7 @@ object Visual extends VisualPlatform {
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
       new Visual(img1, img2, server, canvas, speed = speed, poem = poem.toArray, poemBoxes = poemBoxes.toArray,
-        poly = poly.toArray, minWords = 6, maxWords = 10)
+        poly = poly.toArray, minWords = 6, maxWords = 10, sensors = sensors.toArray)
     }
   }
 
@@ -242,7 +253,8 @@ object Visual extends VisualPlatform {
 }
 class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], server: Server, canvas: Canvas[Ctx],
                                         speed: Double, poem: Array[String], poemBoxes: Array[IRect2D],
-                                        poly: Array[(Float, Float)], minWords: Int, maxWords: Int) {
+                                        poly: Array[(Float, Float)], minWords: Int, maxWords: Int,
+                                        sensors: Array[Sensor]) {
   private val canvasW   = canvas.width
   private val canvasWH  = canvasW / 2
   private val canvasH   = canvas.height
@@ -256,16 +268,23 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private var trunkTgtX = trunkX
   private var trunkTgtY = trunkY
   private var composite: Composite = Composite.ColorBurn
-//  private val polyColor1: Color = Color.RGB4(0xF00)
+  private val polyColor1: Color = Color.ARGB8(0x20FF0000)
 //  private val polyColor2: Color = Color.RGB4(0xFF0)
   private var mouseX    = -1
   private var mouseY    = -1
 
-  private val poemIndices = poem.indices.toArray
-  private var numPlaced = 0
-  private val placed    = Array.fill(maxWords)(new Word)
-  private var placeTime = 0.0
-  private var placeOp   = 0   // 0 nada, 1 insert, 2 remove
+  private val poemIndices   = poem.indices.toArray
+  private var numPlaced     = 0
+  private val placed        = Array.fill(maxWords)(new Word)
+  private var placeTime     = 0.0
+  private var placeOp       = 0   // 0 nada, 1 insert, 2 remove
+  private var placeNextIdx  = 0
+
+  private val sensorShapes  = sensors.map { s =>
+    val res = new Ellipse2D.Double(s.cx - s.r, s.cy - s.r, s.r * 2, s.r * 2)
+    println(res)
+    res
+  }
 
   private val polyShape: Shape = {
     val res = new Path2D.Double
@@ -284,18 +303,6 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     composite = Composite.parse(name)
     repaint()
   }
-
-//  def setText(s: String, x: Double, y: Double): Unit = {
-//    palabra   = s
-//    palabraX  = x
-//    palabraY  = y
-////    repaint()
-//  }
-
-//  def setTextColor(name: String): Unit = {
-//    textColor = Color.parse(name)
-////    repaint()
-//  }
 
   def setTrunkPos(x: Double, y: Double): Unit = {
     trunkX = x
@@ -351,10 +358,10 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private val rContain = new Rectangle2D.Double
 
   def paint(ctx: Ctx, animTime: Double): Unit = {
-    val dt = min(100.0, animTime - lastAnimTime)
+    val animDt = min(100.0, animTime - lastAnimTime)
     lastAnimTime = animTime
 
-    val wT  = dt * speed // 0.01
+    val wT  = animDt * speed // 0.01
     val wS  = 1.0 - wT
     val trunkX1  = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
     val trunkY1  = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
@@ -368,12 +375,19 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     val ty = trunkY - trunkMinY
     img1.draw(ctx, -tx, -ty)
 
+//    ctx.translate(-tx, -ty)
+//    ctx.fillStyle = polyColor1
+//    sensorShapes.foreach { sh =>
+//      ctx.fillShape(sh)
+//    }
+//    ctx.translate(tx, ty)
+
     var placedIdx = 0
     while (placedIdx < numPlaced) {
       val p   = placed(placedIdx)
       val pb  = p.r // poemBoxes(placedIdx)
-      val pT  = dt * 0.005
-      val fr  = 1.0 - (dt * 0.001)
+      val pT  = animDt * 0.005            // actually we should use power / logarithmic scale
+      val fr  = 1.0 - (animDt * 0.001)
       val pS  = 1.0 - pT
       val vis = {
         val px0 = p.x - tx + pb.getX
@@ -444,10 +458,19 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
       placeOp   = if (numPlaced < minWords) 1 else if (numPlaced == maxWords) 2 else Random.nextInt(2) + 1
       // note: should be larger than fade-time, otherwise we need additional logic
       placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
+      if (placeOp == 1) {
+        placeNextIdx = Random.nextInt(poem.length - numPlaced)
+      } else if (placeOp == 2) {
+        val pi  = Random.nextInt(numPlaced)
+        val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+        placed(pi).fadeOut(animTime, dur = fdt)
+        placeOp = 0
+      }
     }
 
     if (placeOp == 1) {
-      val pii = Random.nextInt(poem.length - numPlaced)
+      // keep trying with the same index, so we do not favour short words
+      val pii = placeNextIdx // Random.nextInt(poem.length - numPlaced)
       val pi  = poemIndices(pii)
       val pb  = poemBoxes(pi)
       val rx  = Random.nextInt(canvasW - pb.width ) + tx
@@ -487,12 +510,6 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
         poemIndices(piiS) = pi
         placeOp = 0
       }
-    }
-    else if (placeOp == 2) {
-      val pi = Random.nextInt(numPlaced)
-      val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
-      placed(pi).fadeOut(animTime, dur = fdt)
-      placeOp = 0
     }
 
     ctx.composite = composite //  "color-burn"

@@ -14,6 +14,7 @@ Research process: [www.researchcatalogue.net/view/711664/1111185](https://www.re
 Software based on:
 - [SoundProcesses](https://github.com/Sciss/SoundProcesses) -- AGPL v3+ license
 - [scsynth.wasm](https://github.com/Sciss/supercollider/tree/wasm) -- GPL v2+ license
+- a translation of `java.awt.geom` classes from [OpenJDK](http://openjdk.java.net/) - GPL v2 with "classpath exception" license
 
 The SoundProcesses/Mellite workspace file `workspace.mllt.bin` is released under
 Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) license.
