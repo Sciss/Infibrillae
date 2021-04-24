@@ -4,7 +4,7 @@
 
 ## statement
 
-A sound piece for the web browser.
+A sound poem for the web browser.
 Work in progress.
 
 See online: [www.sciss.de/exp/infibrillae/](https://www.sciss.de/exp/infibrillae/).
