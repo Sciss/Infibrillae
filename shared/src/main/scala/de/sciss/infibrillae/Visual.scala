@@ -184,7 +184,57 @@ object Visual extends VisualPlatform {
       recFramesB += new RecFrame(time = System.currentTimeMillis(), trunkX = trunkX, trunkY = trunkY)
     }
 
-  final class Word(var s: String, val r: Rectangle2D, var x: Double, var y: Double, var vx: Double, var vy: Double) {
+  private val textColor : Color = Color.RGB4(0xCCC)
+  private val textColorT: Color = Color.ARGB8(0x00CCCCCC)
+
+  final class Word {
+    var s: String   = ""
+    val r: Rectangle2D  = new Rectangle2D.Double
+
+    var x : Double  = 0.0
+    var y : Double  = 0.0
+    var vx: Double  = 0.0
+    var vy: Double  = 0.0
+
+    private var fadeState : Int     = 0
+    private var fadeStart : Double  = 0.0
+    private var fadeStop  : Double  = 0.0
+
+    def color(time: Double): Color = fadeState match {
+      case 0 => textColor
+      case 1 => // in
+        if (time > fadeStop) {
+          fadeState = 0
+          textColor
+        } else {
+          val a = time.linLin(fadeStart, fadeStop, 0, 255).toInt
+          Color.ARGB8(0x00CCCCCC | (a << 24))
+        }
+      case 2 => // out
+        if (time > fadeStop) {
+          fadeState = 3
+          textColorT
+        } else {
+          val a = time.linLin(fadeStart, fadeStop, 255, 0).toInt
+          Color.ARGB8(0x00CCCCCC | (a << 24))
+        }
+      case 3 => textColorT
+    }
+
+    def shouldRemove: Boolean = fadeState == 3
+
+    def fadeIn(time: Double, dur: Double = 2.0): Unit = {
+      fadeState = 1
+      fadeStart = time
+      fadeStop  = time + dur * 1000
+    }
+
+    def fadeOut(time: Double, dur: Double = 2.0): Unit = {
+      fadeState = 2
+      fadeStart = time
+      fadeStop  = time + dur * 1000
+    }
+
     def halt(): Unit = {
       vx = 0.0
       vy = 0.0
@@ -209,15 +259,11 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
   private var composite: Composite = Composite.ColorBurn
   private val polyColor1: Color = Color.RGB4(0xF00)
   private val polyColor2: Color = Color.RGB4(0xFF0)
-  private var textColor: Color  = Color.RGB4(0xCCC)
-//  private var palabra   = "in|fibrillae"
-//  private var palabraX  = 100.0
-//  private var palabraY  = 100.0
   private var mouseX    = -1
   private var mouseY    = -1
 
   private var numPlaced = 0
-  private val placed    = Array.fill(maxWords)(new Word("", new Rectangle2D.Double, 0.0, 0.0, 0.0, 0.0))
+  private val placed    = Array.fill(maxWords)(new Word)
 
   private val polyShape: Shape = {
     val res = new Path2D.Double
@@ -244,10 +290,10 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
 ////    repaint()
 //  }
 
-  def setTextColor(name: String): Unit = {
-    textColor = Color.parse(name)
-//    repaint()
-  }
+//  def setTextColor(name: String): Unit = {
+//    textColor = Color.parse(name)
+////    repaint()
+//  }
 
   def setTrunkPos(x: Double, y: Double): Unit = {
     trunkX = x
@@ -298,6 +344,9 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
     sendTrunkXY()
     repaint()
   }
+
+  private val rCollide = new Rectangle2D.Double
+  private val rContain = new Rectangle2D.Double
 
   def paint(ctx: Ctx, animTime: Double): Unit = {
     val dt = min(100.0, animTime - lastAnimTime)
@@ -372,14 +421,29 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
         }
         val sx   = p.x + p.vx
         val sy   = p.y + p.vy
-        if (polyShape.contains(pb.getX + sx, pb.getY + sy, pb.getWidth, pb.getHeight)) {
+
+        rCollide.setRect(sx + pb.getX, sy + pb.getY, pb.getWidth, pb.getHeight)
+        var collides = false
+        var i = 0 // placedIdx + 1
+        while (!collides && i < numPlaced) {
+          if (i != placedIdx) {
+            val q   = placed(i)
+            val qb  = q.r
+            if (rCollide.intersects(q.x + qb.getX, q.y + qb.getY, qb.getWidth, qb.getHeight)) {
+              collides = true
+            }
+          }
+          i += 1
+        }
+
+        if (!collides && polyShape.contains(rCollide /*pb.getX + sx, pb.getY + sy, pb.getWidth, pb.getHeight*/)) {
           p.x = sx
           p.y = sy
         } else {
           p.vx = 0.0
           p.vy = 0.0
         }
-        ctx.fillStyle = textColor
+        ctx.fillStyle = p.color(animTime) // textColor
         ctx.fillText(p.s, p.x - tx, p.y - ty)
       } else {
         p.vx *= pS
@@ -410,7 +474,8 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
       }
       if (!collides && {
         val a = new Area(polyShape)
-        a.intersect(new Area(new Rectangle2D.Double(tx, ty, canvasW, canvasH)))
+        rContain.setRect(tx, ty, canvasW, canvasH)
+        a.intersect(new Area(rContain))
         a.contains(p.r)
       }) {
         p.s   = poem(pi)
@@ -419,6 +484,7 @@ class Visual[Ctx <: Graphics2D] private(img1: Image[Ctx], img2: Image[Ctx], serv
         p.y   = ry - pb.y
         p.vx  = 0.0
         p.vy  = 0.0
+        p.fadeIn(animTime)
         numPlaced += 1
       }
     }
