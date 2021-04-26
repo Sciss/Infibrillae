@@ -33,6 +33,8 @@ object Color {
       s"#${h.substring(1)}"
     }
 
+    def replaceAlpha(a: Int): ARGB8 = copy((value & 0x00FFFFFF) | (a << 24))
+
     override def cssString: String = _cssString
   }
 }

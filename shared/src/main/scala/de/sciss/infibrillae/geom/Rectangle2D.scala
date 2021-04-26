@@ -96,6 +96,8 @@ object Rectangle2D {
 
     def this() = this(0f, 0f, 0f, 0f)
 
+    override def toString: String = s"Rectangle2D.Float($x, $y, $width, $height)"
+
     override def getX     : SDouble = x
     override def getY     : SDouble = y
     override def getWidth : SDouble = width
@@ -169,16 +171,6 @@ object Rectangle2D {
       Rectangle2D.union(this, r, dest)
       dest
     }
-
-    /**
-      * Returns the `String` representation of this
-      * `Rectangle2D`.
-      *
-      * @return a `String` representing this
-      *         `Rectangle2D`.
-      * @since 1.2
-      */
-    override def toString: String = getClass.getName + "[x=" + x + ",y=" + y + ",w=" + width + ",h=" + height + "]"
   }
 
   /**
@@ -211,6 +203,8 @@ object Rectangle2D {
       this()
       setRect(x, y, w, h)
     }
+
+    override def toString: String = s"Rectangle2D.Double($x, $y, $width, $height)"
 
     override def getX     : SDouble = x
     override def getY     : SDouble = y
@@ -257,8 +251,6 @@ object Rectangle2D {
       Rectangle2D.union(this, r, dest)
       dest
     }
-
-    override def toString: String = getClass.getName + "[x=" + x + ",y=" + y + ",w=" + width + ",h=" + height + "]"
   }
 
   /**

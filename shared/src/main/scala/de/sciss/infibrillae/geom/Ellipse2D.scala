@@ -86,17 +86,11 @@ object Ellipse2D {
       setFrame(x, y, w, h)
     }
 
-    /**
-      * ``
-      *
-      * @since 1.2
-      */
-    override def getX: SDouble = x.toDouble
+    override def toString: String = s"Ellipse2D.Float($x, $y, $width, $height)"
 
-    override def getY: SDouble = y.toDouble
-
-    override def getWidth: SDouble = width.toDouble
-
+    override def getX     : SDouble = x.toDouble
+    override def getY     : SDouble = y.toDouble
+    override def getWidth : SDouble = width.toDouble
     override def getHeight: SDouble = height.toDouble
 
     override def isEmpty: Boolean = width <= 0.0f || height <= 0.0f
@@ -160,6 +154,8 @@ object Ellipse2D {
       setFrame(x, y, w, h)
     }
 
+    override def toString: String = s"Ellipse2D.Double($x, $y, $width, $height)"
+
     override def getX     : SDouble = x
     override def getY     : SDouble = y
     override def getWidth : SDouble = width
@@ -190,9 +186,6 @@ object Ellipse2D {
   * @since 1.2
   */
 abstract class Ellipse2D protected() extends RectangularShape {
-  override def toString: String =
-    getClass.getName + "[x=" + getX + ",y=" + getY + ",w=" + getWidth + ",h=" + getHeight + "]"
-
   override def contains(x: SDouble, y: SDouble): Boolean = { // Normalize the coordinates compared to the ellipse
     // having a center at 0,0 and a radius of 0.5.
     val ellW = getWidth

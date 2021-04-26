@@ -16,11 +16,9 @@ package de.sciss.infibrillae
 import de.sciss.infibrillae.Visual.{Sensor, Word}
 import de.sciss.infibrillae.geom.{Area, Ellipse2D, Path2D, Rectangle2D, Shape}
 import de.sciss.lucre.synth.Executor.executionContext
-import de.sciss.lucre.synth.Server
 import de.sciss.numbers.Implicits._
 import de.sciss.osc
 import de.sciss.synth.UGenSource.Vec
-import de.sciss.synth.message
 
 import scala.concurrent.Future
 import scala.math.{Pi, atan2, min}
@@ -149,21 +147,36 @@ object Visual extends VisualPlatform {
 
   def apply(client: osc.Transmitter.Directed, canvas: Canvas[Ctx], idx: Int): Future[Visual[Ctx]] = {
     val (nameTrunk, nameFibre) = trunkNameSq(idx)
-    val poem      = poemSq(idx)
+    val words     = poemSq(idx)
     val poemBoxes = poemBoxesSq(idx)
     val speed     = speedSq(idx)
     val poly      = polySq(idx)
     val sensors   = sensorsSq(idx)
     for {
-      img1 <- loadImage(nameTrunk)
-      img2 <- loadImage(nameFibre)
+      imgTrunk <- loadImage(nameTrunk)
+      imgFibre <- loadImage(nameFibre)
     } yield {
 //      val t = osc.Browser.Transmitter(osc.Browser.Address(57110))
 //      t.connect()
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-      new Visual(img1, img2, client, canvas, speed = speed, poem = poem.toArray, poemBoxes = poemBoxes.toArray,
-        poly = poly.toArray, minWords = 6, maxWords = 10, sensors = sensors.toArray)
+      val poem = words.iterator.zip(poemBoxes).zipWithIndex.map { case ((s, pb), pi) =>
+        val bridge = if (pi == words.size - 2) -1 else if (pi == words.size - 1) +1 else 0
+        new Word(s, new Rectangle2D.Double(pb.x, pb.y, pb.width, pb.height), bridge = bridge)
+      } .toArray
+      new Visual(
+        imgTrunk  = imgTrunk,
+        imgFibre  = imgFibre,
+        client    = client,
+        canvas    = canvas,
+        speed     = speed,
+        poem      = poem,
+        poly      = poly.toArray,
+        minWords  = 6,
+        maxWords  = 10,
+        sensors   = sensors.toArray,
+        verbose = false,
+      )
     }
   }
 
@@ -195,12 +208,18 @@ object Visual extends VisualPlatform {
       recFramesB += new RecFrame(time = System.currentTimeMillis(), trunkX = trunkX, trunkY = trunkY)
     }
 
-  private val textColor : Color = Color.RGB4(0xCCC)
-  private val textColorT: Color = Color.ARGB8(0x00CCCCCC)
+  val textColor   : Color         = Color.RGB4(0xCCC)
+  val textColorT  : Color.ARGB8   = Color.ARGB8(0x00CCCCCC)
+  val textColorB  : Color         = Color.RGB4(0xEAA)
+  val textColorBT : Color.ARGB8   = Color.ARGB8(0x00EEAAAA)
 
-  final class Word {
-    var s: String       = ""
-    val r: Rectangle2D  = new Rectangle2D.Double
+  /**
+    * @param s        the word string
+    * @param r        the word bounds at origin; must not be modified
+    * @param bridge   -1 back, +1 forth, 0 none
+    */
+  final class Word(val s: String, val r: Rectangle2D, val bridge: Int) {
+    override def toString: String = f"Word($s, $r, $bridge), x = $x%1.1f, y = $y%1.1f, fadeState = $fadeState"
 
     var x : Double  = 0.0
     var y : Double  = 0.0
@@ -211,6 +230,9 @@ object Visual extends VisualPlatform {
     private var fadeStart : Double  = 0.0
     private var fadeStop  : Double  = 0.0
 
+    private val textColor : Color         = if (bridge == 0) Visual.textColor   else Visual.textColorB
+    private val textColorT: Color.ARGB8   = if (bridge == 0) Visual.textColorT  else Visual.textColorBT
+
     def color(timeStamp: Double): Color = fadeState match {
       case 0 => textColor
       case 1 => // in
@@ -219,7 +241,7 @@ object Visual extends VisualPlatform {
           textColor
         } else {
           val a = timeStamp.linLin(fadeStart, fadeStop, 0, 255).toInt
-          Color.ARGB8(0x00CCCCCC | (a << 24))
+          textColorT.replaceAlpha(a)
         }
       case 2 => // out
         if (timeStamp > fadeStop) {
@@ -227,7 +249,7 @@ object Visual extends VisualPlatform {
           textColorT
         } else {
           val a = timeStamp.linLin(fadeStart, fadeStop, 255, 0).toInt
-          Color.ARGB8(0x00CCCCCC | (a << 24))
+          textColorT.replaceAlpha(a)
         }
       case 3 => textColorT
     }
@@ -252,12 +274,19 @@ object Visual extends VisualPlatform {
     }
   }
 }
-class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[Ctx],
-                                        client: osc.Transmitter.Directed,
-                                        canvas: Canvas[Ctx],
-                                        speed: Double, poem: Array[String], poemBoxes: Array[IRect2D],
-                                        poly: Array[(Float, Float)], minWords: Int, maxWords: Int,
-                                        sensors: Array[Sensor]) {
+class Visual[Ctx <: Graphics2D] private(
+                                         imgTrunk : Image[Ctx],
+                                         imgFibre : Image[Ctx],
+                                         client   : osc.Transmitter.Directed,
+                                         canvas   : Canvas[Ctx],
+                                         speed    : Double,
+                                         poem     : Array[Word],
+                                         poly     : Array[(Float, Float)],
+                                         minWords : Int,
+                                         maxWords : Int,
+                                         sensors  : Array[Sensor],
+                                         verbose  : Boolean,
+                                       ) {
   private val canvasW   = canvas.width
   private val canvasWH  = canvasW / 2
   private val canvasH   = canvas.height
@@ -271,16 +300,14 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
   private var trunkTgtX = trunkX
   private var trunkTgtY = trunkY
   private var composite: Composite = Composite.ColorBurn
-  private val polyColor1: Color = Color.ARGB8(0x20FF0000)
+//  private val polyColor1: Color = Color.ARGB8(0x20FF0000)
 //  private val polyColor2: Color = Color.RGB4(0xFF0)
   private var mouseX    = -1
   private var mouseY    = -1
 
-  private val poemIndices   = poem.indices.toArray
   private var numPlaced     = 0
-  private val placed        = Array.fill(maxWords)(new Word)
   private var placeTime     = 0.0
-  private var placeOp       = 0   // 0 nada, 1 insert, 2 remove
+  private var placeOp       = 0   // 0 nada, 1 insert, 2 remove, -1 bridge prepare, -2 bridge
   private var placeNextIdx  = 0
 
   private val sensorShapes  = sensors.map { s =>
@@ -359,8 +386,8 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
     repaint()
   }
 
-  private val rCollide = new Rectangle2D.Double
-  private val rContain = new Rectangle2D.Double
+  private val rTest1 = new Rectangle2D.Double
+  private val rTest2 = new Rectangle2D.Double
 
   def paint(ctx: Ctx, animTime: Double): Unit = {
     val animDt = min(100.0, animTime - lastAnimTime)
@@ -387,9 +414,9 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
 //    }
 //    ctx.translate(tx, ty)
 
-    var placedIdx = 0
-    while (placedIdx < numPlaced) {
-      val p   = placed(placedIdx)
+    var pi = 0
+    while (pi < numPlaced) {
+      val p   = poem(pi)
       val pb  = p.r // poemBoxes(placedIdx)
       val pT  = animDt * 0.005            // actually we should use power / logarithmic scale
       val fr  = 1.0 - (animDt * 0.001)
@@ -419,21 +446,21 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
         val sx   = p.x + p.vx
         val sy   = p.y + p.vy
 
-        rCollide.setRect(sx + pb.getX, sy + pb.getY, pb.getWidth, pb.getHeight)
+        rTest1.setRect(sx + pb.getX, sy + pb.getY, pb.getWidth, pb.getHeight)
         var collides = false
-        var i = 0 // placedIdx + 1
-        while (!collides && i < numPlaced) {
-          if (i != placedIdx) {
-            val q   = placed(i)
+        var pj = 0 // placedIdx + 1
+        while (!collides && pj < numPlaced) {
+          if (pj != pi) {
+            val q   = poem(pj)
             val qb  = q.r
-            if (rCollide.intersects(q.x + qb.getX, q.y + qb.getY, qb.getWidth, qb.getHeight)) {
+            if (rTest1.intersects(q.x + qb.getX, q.y + qb.getY, qb.getWidth, qb.getHeight)) {
               collides = true
             }
           }
-          i += 1
+          pj += 1
         }
 
-        if (!collides && polyShape.contains(rCollide /*pb.getX + sx, pb.getY + sy, pb.getWidth, pb.getHeight*/)) {
+        if (!collides && polyShape.contains(rTest1 /*pb.getX + sx, pb.getY + sy, pb.getWidth, pb.getHeight*/)) {
           p.x = sx
           p.y = sy
         } else {
@@ -442,10 +469,12 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
         }
         ctx.fillStyle = p.color(animTime)
         if (p.shouldRemove) {
-          placed(placedIdx) = placed(numPlaced - 1)
-          placed(numPlaced - 1) = p
           numPlaced -= 1
-          placedIdx -= 1  // "repeat" index
+          poem(pi) = poem(numPlaced)
+          poem(numPlaced) = p
+          pi -= 1  // "repeat" index
+          if (verbose) println(s"remove. p = $p, numPlaced = $numPlaced")
+          if (verbose) println(poem.take(numPlaced).map(_.s).mkString("after remove: ", ", ", ""))
 
         } else {
           ctx.fillText(p.s, p.x - tx, p.y - ty)
@@ -456,70 +485,82 @@ class Visual[Ctx <: Graphics2D] private(imgTrunk: Image[Ctx], imgFilter: Image[C
         p.vy *= pS
       }
 
-      placedIdx += 1
+      pi += 1
     }
 
-    if (placeOp == 0 && placeTime < animTime) {
-      placeOp   = if (numPlaced < minWords) 1 else if (numPlaced == maxWords) 2 else Random.nextInt(2) + 1
-      // note: should be larger than fade-time, otherwise we need additional logic
-      placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
-      if (placeOp == 1) {
-        placeNextIdx = Random.nextInt(poem.length - numPlaced)
-      } else if (placeOp == 2) {
-        val pi  = Random.nextInt(numPlaced)
-        val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
-        placed(pi).fadeOut(animTime, dur = fdt)
-        placeOp = 0
+    if (placeOp <= 0 && placeTime < animTime) {
+      if (placeOp == 0) {
+        placeOp = if (numPlaced < minWords) 1 else if (numPlaced == maxWords) 2 else Random.nextInt(2) + 1
+        // note: should be larger than fade-time, otherwise we need additional logic
+        placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
+        if (placeOp == 1) {
+          placeNextIdx = Random.nextInt(poem.length - numPlaced) + numPlaced
+
+        } else if (placeOp == 2) {
+          val pi  = Random.nextInt(numPlaced)
+          val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+          poem(pi).fadeOut(animTime, dur = fdt)
+          placeOp = 0
+        }
+      } else if (placeOp == -1) { // XXX TODO: and is visible!
+        var pi = 0
+        while (pi < numPlaced - 1) {
+          val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+          poem(pi).fadeOut(animTime, dur = fdt)
+          pi += 1
+        }
+        placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 12000.0, 24000.0)
+        placeOp = -2
       }
     }
 
     if (placeOp == 1) {
       // keep trying with the same index, so we do not favour short words
-      val pii = placeNextIdx // Random.nextInt(poem.length - numPlaced)
-      val pi  = poemIndices(pii)
-      val pb  = poemBoxes(pi)
-      val rx  = Random.nextInt(canvasW - pb.width ) + tx
-      val ry  = Random.nextInt(canvasH - pb.height) + ty
-      val p   = placed(numPlaced)
-//      p.r.setRect(pb.x, pb.y, pb.width, pb.height)
-      p.r.setRect(rx /*+ pb.x*/, ry /*+ pb.y*/, pb.width, pb.height)
+      val pi  = placeNextIdx // Random.nextInt(poem.length - numPlaced)
+      val p   = poem(pi)
+      val pb  = p.r
+      val rx  = Random.nextInt(canvasW - pb.getWidth .toInt) + tx
+      val ry  = Random.nextInt(canvasH - pb.getHeight.toInt) + ty
+      rTest1.setRect(rx /*+ pb.x*/, ry /*+ pb.y*/, pb.getWidth, pb.getHeight)
       var collides = false
       var i = 0
       while (!collides && i < numPlaced) {
-        val q   = placed(i)
+        val q   = poem(i)
         val qb  = q.r
-        if (p.r.intersects(q.x + qb.getX, q.y + qb.getY, qb.getWidth, qb.getHeight)) {
-//          println(s"${p.r} collides with $q at index $i")
+        if (rTest1.intersects(q.x + qb.getX, q.y + qb.getY, qb.getWidth, qb.getHeight)) {
           collides = true
         }
         i += 1
       }
       if (!collides && {
         val a = new Area(polyShape)
-        rContain.setRect(tx, ty, canvasW, canvasH)
-        a.intersect(new Area(rContain))
-        a.contains(p.r)
+        rTest2.setRect(tx, ty, canvasW, canvasH)
+        a.intersect(new Area(rTest2))
+        a.contains(rTest1)
       }) {
-        p.s   = poem(pi)
-        p.r.setRect(pb.x, pb.y, pb.width, pb.height)
-        p.x   = rx - pb.x
-        p.y   = ry - pb.y
+        p.x   = rx - pb.getX
+        p.y   = ry - pb.getY
         p.vx  = 0.0
         p.vy  = 0.0
         val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
         p.fadeIn(animTime, dur = fdt)
         // now swap with end to avoid duplicate choices
+        poem(pi)        = poem(numPlaced)
+        poem(numPlaced) = p
+        if (verbose) println(s"insert. p = $p, numPlaced = $numPlaced")
         numPlaced += 1
-        val piiS = poem.length - numPlaced
-        poemIndices(pii)  = poemIndices(piiS)
-        poemIndices(piiS) = pi
-        placeOp = 0
+        if (verbose) println(poem.take(numPlaced).map(_.s).mkString("after insert: ", ", ", ""))
+        if (p.bridge == 0) {
+          placeOp = 0
+        } else {
+          placeOp = -1
+        }
       }
     }
 
     ctx.composite = composite //  "color-burn"
 //    ctx.drawImage(img2, 0.0, 0.0)
-    imgFilter.draw(ctx, 0.0, 0.0)
+    imgFibre.draw(ctx, 0.0, 0.0)
   }
 
   private var dragActive  = false
