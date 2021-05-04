@@ -133,8 +133,8 @@ object Infibrillae {
 
     val container: dom.Element = dom.document.getElementById("piece")
 
-//    val fut = DirectWorkspace()
-    val fut = LoadWorkspace(s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
+//    val fut = LoadWorkspace(s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
+    val fut = TestBufferPrepare()
 
     import Executor.executionContext
 

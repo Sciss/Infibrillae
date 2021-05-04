@@ -13,7 +13,7 @@ lazy val deps = new {
     val lucreSwing      = "2.6.3"
 //    val plotly          = "0.8.1"
     val scalaJavaTime   = "2.2.2"
-    val soundProcesses  = "4.7.4"
+    val soundProcesses  = "4.7.5-SNAPSHOT"
   }
 }
 

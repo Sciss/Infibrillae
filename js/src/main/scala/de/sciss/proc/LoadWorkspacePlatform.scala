@@ -33,7 +33,7 @@ trait LoadWorkspacePlatform {
 
     oReq.onload = { _ =>
       oReq.response match {
-        case ab: ArrayBuffer =>
+        case ab: ArrayBuffer if oReq.status == 200 =>
           try {
             val bytes   = new Int8Array(ab).toArray
             val ws      = Blob.fromByteArray(bytes)
@@ -43,6 +43,9 @@ trait LoadWorkspacePlatform {
           } catch {
             case NonFatal(ex) => res.failure(ex)
           }
+
+        case _ if oReq.status != 200 =>
+          res.failure(new Exception(s"Download failed with status ${oReq.status}"))
 
         case other =>
           res.failure(new Exception(s"Expected an ArrayBuffer but got $other"))
