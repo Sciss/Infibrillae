@@ -12,6 +12,7 @@ lazy val deps = new {
     val lucre           = "4.4.4"
     val lucreSwing      = "2.6.3"
 //    val plotly          = "0.8.1"
+    val scalaCollider   = "2.6.4-SNAPSHOT"
     val scalaJavaTime   = "2.2.2"
     val soundProcesses  = "4.7.5-SNAPSHOT"
   }
@@ -36,6 +37,7 @@ lazy val root = crossProject(platforms: _*).in(file("."))
       "de.sciss"          %%% "lucre-core"            % deps.main.lucre,
       "de.sciss"          %%% "lucre-expr"            % deps.main.lucre,
       "de.sciss"          %%% "lucre-swing"           % deps.main.lucreSwing,
+      "de.sciss"          %%% "scalacollider"         % deps.main.scalaCollider,
       "de.sciss"          %%% "soundprocesses-core"   % deps.main.soundProcesses,
       "de.sciss"          %%% "soundprocesses-views"  % deps.main.soundProcesses,
     ),

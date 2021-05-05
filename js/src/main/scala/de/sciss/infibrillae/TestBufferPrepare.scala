@@ -37,13 +37,15 @@ object TestBufferPrepare {
   type S = Durable
   type T = Durable.Txn
 
-  val FILE_NAME   = "HB_1_NC_T176.wav"
-  val FILE_FRAMES = 4508743L
-  val rootURI     = new URI("idb", "/", null)
+  val FILE_NAME_REMOTE  = "HS_MergedCutFrom3'35Rsmp-Trns-BleachI-453.aif"
+  val FILE_NAME_LOCAL   = "foo.aif"
+  val FILE_FRAMES       = 2023731L
+  val FILE_CHANNELS     = 2
+  val rootURI           = new URI("idb", "/", null)
 
   def apply(): Future[(Universe[T], View[T])] = {
     val oReq  = new XMLHttpRequest
-    val url   = s"assets/$FILE_NAME"
+    val url   = s"assets/$FILE_NAME_REMOTE"
     oReq.open(method = "GET", url = url, async = true)
     oReq.responseType = "arraybuffer"
     val res = Promise[(Universe[T], View[T])]()
@@ -56,7 +58,7 @@ object TestBufferPrepare {
             val bytes = new Int8Array(ab).toArray
             println(s"ArrayBuffer byteLength is ${ab.byteLength}")
             val futLoad = for {
-              af  <- AsyncFile.openWrite(rootURI / FILE_NAME)
+              af  <- AsyncFile.openWrite(rootURI / FILE_NAME_LOCAL)
               _   <- af.write(ByteBuffer.wrap(bytes))
               _   <- af.close()
               tup <- createWorkspace()
@@ -86,12 +88,37 @@ object TestBufferPrepare {
   private def createWorkspace(): Future[(Universe[T], View[T])] = {
     implicit val cursor: S = Durable(InMemoryDB())
 
-    lazy val gProc = SynthGraph {
+    lazy val gProcSave = SynthGraph {
+      import synth.proc.graph._
+      import ugen._
+
+      val pitch = LFSaw.kr(0.14)
+        .mulAdd(24, LFSaw.kr(List(8, 7.23))
+          .mulAdd(2, 80))
+      val osc   = SinOsc.ar(pitch.midiCps) * 0.1
+      val verb  = CombN.ar(osc, 0.2, 0.2, 4)
+
+      // val SR    = 48000.0
+      val b     = Buffer.Empty(/*SR * 20*/ FILE_FRAMES, numChannels = FILE_CHANNELS)
+      val sig   = Seq.tabulate(FILE_CHANNELS)(verb.out)
+      val rb    = RecordBuf.ar(sig, buf = b, loop = 0)
+      val rDone = Done.kr(rb)
+      val wb    = Action.WriteBuf(rDone, "out", buf = b, fileType = 0, sampleFormat = 1)
+
+      DC.kr(0).poll(rDone , "REC DONE"  )
+      DC.kr(0).poll(wb    , "WRITE DONE")
+
+      StopSelf(wb)
+
+      Out.ar(0, verb)
+    }
+
+    lazy val gProcLoad = SynthGraph {
       import synth.proc.graph._
       import ugen._
 
       val b   = Buffer("in")
-      val sig = PlayBuf.ar(1, b)
+      val sig = PlayBuf.ar(numChannels = FILE_CHANNELS, buf = b)
       Out.ar(0, sig)
     }
 
@@ -99,7 +126,8 @@ object TestBufferPrepare {
       import expr.graph._
       import swing.graph._
 
-      val rProc = Runner("proc")
+      val rProcLoad = Runner("proc-load")
+      val rProcSave = Runner("proc-save")
 
       val as              = AuralSystem()
       val booted          = as.isRunning
@@ -129,11 +157,14 @@ object TestBufferPrepare {
         (ggStart, ggStop)
       }
 
-      val (ggStartProc, ggStopProc) = mkStartStop(rProc)
+      val (ggStartLoadProc, ggStopLoadProc) = mkStartStop(rProcLoad)
+      val (ggStartSaveProc, ggStopSaveProc) = mkStartStop(rProcSave)
 
-      rProc.state.changed ---> PrintLn(Const("STATE = ") ++ rProc.state.toStr)
+//      rProcLoad.state.changed ---> PrintLn(Const("STATE = ") ++ rProcLoad.state.toStr)
 
-      FlowPanel(ggBoot, Label("Proc:"), ggStartProc, ggStopProc)
+      FlowPanel(ggBoot,
+        Label("Load:"), ggStartLoadProc, ggStopLoadProc,
+        Label("Save:"), ggStartSaveProc, ggStopSaveProc)
     }
 
     val gW = gW0
@@ -145,22 +176,27 @@ object TestBufferPrepare {
     val (universe, view) = cursor.step { implicit tx =>
       implicit val u: Universe[T] = Universe.dummy[T]
 
-      val p = proc.Proc[T]()
-      p.graph() = gProc
+      val pLoad = proc.Proc[T]()
+      pLoad.graph() = gProcLoad
+      val pSave = proc.Proc[T]()
+      pSave.graph() = gProcSave
 
       val loc     = LArtifactLocation.newConst[T](rootURI)
-      val art     = LArtifact[T](loc, LArtifact.Child(FILE_NAME /*"Einleitung_NC_T061.wav"*/))
-      val spec    = AudioFileSpec(AudioFileType.Wave, SampleFormat.Int24,
-        numChannels = 1, sampleRate = 48000.0, numFrames = FILE_FRAMES /*7541957L*/)
+      val art     = LArtifact[T](loc, LArtifact.Child(FILE_NAME_LOCAL /*"Einleitung_NC_T061.wav"*/))
+      val spec    = AudioFileSpec(AudioFileType.AIFF, SampleFormat.Int24,
+        numChannels = FILE_CHANNELS, sampleRate = 48000.0, numFrames = FILE_FRAMES /*7541957L*/)
       val cue     = proc.AudioCue.Obj[T](art, spec, 0L, 1.0)
 
       val w = proc.Widget[T]()
       w.graph() = gW
 
-      val pAttr = p.attr
-      val wAttr = w.attr
-      pAttr.put("in"  , cue )
-      wAttr.put("proc", p   )
+      val pLoadAttr = pLoad.attr
+      val pSaveAttr = pSave.attr
+      val wAttr     = w.attr
+      pLoadAttr .put("in"       , cue  )
+      pSaveAttr .put("out"      , art  )
+      wAttr     .put("proc-load", pLoad)
+      wAttr     .put("proc-save", pSave)
 
       val wH = tx.newHandle(w)
       implicit val ctx: expr.Context[T] = ExprContext(selfH = Some(wH))
