@@ -28,6 +28,8 @@ import scala.util.control.NonFatal
 object Visual extends VisualPlatform {
   val font: Font = Font("Voltaire", 36)
 
+  final val NumSpaces = 3 // eventually 6
+
   private val trunkNameSq: Seq[(String, String)] = Seq(
     ("trunk11crop.jpg", "fibre4298crop1.jpg"),
     ("trunk13.jpg"    , "fibre4144crop1.jpg"),
@@ -105,7 +107,7 @@ object Visual extends VisualPlatform {
     ),
   )
 
-  private val polySq: Seq[Vec[(Float, Float)]] = Seq(
+  private val polySq: Seq[List[Vec[(Float, Float)]]] = Seq(
     Vector(
       (590.7143f,1116.7142f), (549.2857f,1080.9999f), (557.8571f,1040.2856f), (549.2857f,1001.71423f),
       (592.8572f,918.1428f), (630.71436f,837.4286f), (680.71436f,793.1429f), (707.14294f,713.1429f),
@@ -119,20 +121,43 @@ object Visual extends VisualPlatform {
       (1395.7144f,1744.5715f), (1370.0001f,1794.5715f), (1305.0001f,1821.7145f), (1190.0001f,1755.2859f),
       (1052.1431f,1686.7145f), (1016.4288f,1615.2859f), (845.7144f,1398.8573f), (786.4287f,1346.7145f),
       (680.0001f,1261.0001f), (680.0001f,1235.2859f), (609.2858f,1167.4288f),
-    ),
-    Vector(),
+    ) :: Nil,
     Vector(
-      (60.476192f,433.65207f), (68.03571f,393.58658f), (62.36607f,354.65506f), (65.0119f,311.56577f),
-      (57.452377f,291.911f), (58.586304f,267.72052f), (75.973206f,234.08064f), (77.48511f,183.80981f),
-      (116.03868f,144.87827f), (122.46427f,120.309814f), (157.61606f,88.18183f), (177.27081f,71.17291f),
-      (256.26782f,56.053864f), (353.02972f,66.25922f), (408.59222f,93.47351f), (433.91663f,113.50625f),
-      (466.80054f,124.84553f), (474.36005f,153.19376f), (488.72318f,167.93483f), (542.0178f,257.1372f),
-      (557.5149f,285.8634f), (542.3958f,327.81876f), (528.78864f,387.539f), (514.04755f,413.24136f),
-      (507.244f,447.6372f), (494.01483f,476.74136f), (473.9821f,490.3485f), (452.81543f,523.9884f),
-      (437.3184f,531.9259f), (417.66364f,585.9765f), (365.50293f,640.4051f), (337.15472f,671.7771f),
-      (300.49103f,685.3843f), (262.6934f,686.8962f), (208.26482f,638.8932f), (142.49695f,589.00037f),
-      (100.541595f,530.79205f), (84.666595f,478.63132f)
-    )
+      (290.92392f,1657.3878f), (341.43155f,1583.6467f), (365.6752f,1481.6213f), (403.05084f,1444.2456f),
+      (458.60925f,1253.3268f), (479.82242f,1204.8395f), (480.83258f,1136.149f), (505.07623f,1045.2354f),
+      (525.2793f,901.7937f), (569.726f,814.9206f), (599.02045f,757.3419f), (601.0408f,704.81396f),
+      (637.40625f,634.10333f), (764.6855f,526.017f), (857.6195f,569.4536f), (854.58905f,692.6922f),
+      (825.2946f,736.1288f), (856.6094f,819.97144f), (839.43677f,871.4892f), (863.6804f,949.271f),
+      (911.1576f,1035.134f), (926.3099f,1205.8497f), (1003.0815f,1332.1189f), (1004.0916f,1383.6367f),
+      (1040.457f,1426.0631f), (1081.8734f,1408.8905f), (1191.98f,1530.1088f), (1258.65f,1531.1189f),
+      (1290.975f,1577.5859f), (1284.914f,1641.2256f), (1223.2947f,1774.5657f), (1105.1068f,1846.2865f),
+      (1061.6702f,1915.987f), (1065.7108f,1979.6267f), (991.9697f,2087.713f), (922.26917f,2249.3374f),
+      (820.74884f,2251.3577f), (789.1815f,2324.0886f), (702.0559f,2321.058f), (695.995f,2175.5962f),
+      (633.36554f,2059.4287f), (416.18274f,1822.0428f),
+    ) :: Nil,
+    Vector(
+      (228.57143f,1639.0f), (257.14285f,1487.5714f), (235.71428f,1340.4286f), (245.71428f,1177.5714f),
+      (217.14285f,1103.2856f), (221.42856f,1011.85706f), (287.14285f,884.71423f), (292.85712f,694.71423f),
+      (438.5714f,547.57135f), (462.85712f,454.71423f), (595.7143f,333.28564f), (670.0f,268.99997f),
+      (968.5714f,211.8571f), (1334.2856f,250.4285f), (1544.2856f,353.28568f), (1640.0f,428.99997f),
+      (1764.2856f,471.8571f), (1792.857f,578.99994f), (1847.1428f,634.71423f), (2048.5713f,971.85706f),
+      (2107.1428f,1080.4285f), (2050.0f,1238.9999f), (1998.5714f,1464.7141f), (1942.8572f,1561.8569f),
+      (1917.143f,1691.8569f), (1867.143f,1801.8569f), (1791.4287f,1853.2855f), (1711.4287f,1980.4285f),
+      (1652.8572f,2010.4285f), (1578.5715f,2214.714f), (1381.4287f,2420.4285f), (1274.2859f,2538.9998f),
+      (1135.7145f,2590.4285f), (992.8573f,2596.1428f), (787.143f,2414.7144f), (538.57153f,2226.143f),
+      (380.00012f,2006.1431f), (320.00012f,1809.0001f)
+    ) ::
+    Vector(
+      (624.2857f,1441.857f), (587.1428f,1216.1428f), (619.99994f,1154.7142f), (640.71423f,1006.14276f),
+      (688.57135f,1011.1428f), (717.85706f,815.42847f), (675.71423f,767.5713f), (799.99994f,637.5713f),
+      (877.1428f,598.9999f), (960.71423f,625.42847f), (1087.1428f,513.28564f), (1154.2856f,306.14282f),
+      (1209.9999f,318.99994f), (1203.5713f,456.85712f), (1286.4285f,567.57135f), (1332.857f,598.2857f),
+      (1457.1428f,877.5714f), (1515.7142f,881.8571f), (1535.0f,943.2857f), (1470.0f,990.4285f),
+      (1478.5715f,1155.4285f), (1521.4286f,1293.2856f), (1525.7144f,1389.7142f), (1455.7142f,1417.5714f),
+      (1301.4286f,1713.2856f), (1234.2856f,1843.2856f), (997.1428f,1931.857f), (898.5714f,1947.5713f),
+      (879.2857f,1881.857f), (801.0714f,1753.2856f), (737.1428f,1737.5713f), (678.5714f,1684.7142f),
+      (622.8571f,1536.1428f), (594.2857f,1465.4285f),
+    ) :: Nil
   )
 
   // defined by a circle region
@@ -143,39 +168,45 @@ object Visual extends VisualPlatform {
       Sensor(765,869,200), Sensor(1162,963,200), Sensor(1268,1663,200), Sensor(945,1335,200),
       Sensor(346,593,324), Sensor(1592,745,324), Sensor(1598,2030,324), Sensor(609,1690,324),
     ),
+    Vector(
+      Sensor(673,879,200), Sensor(887,1259,200), Sensor(1082,1845,200), Sensor(482,1662,200),
+      Sensor(204,571,403), Sensor(1316,988,354), Sensor(1453,2182,351), Sensor(-29,1728,380),
+    ),
+    Vector(
+      Sensor(508,636,200), Sensor(1822,896,200), Sensor(1599,1893,200), Sensor(516,1928,200),
+      Sensor(173,308,403), Sensor(2216,656,354), Sensor(1988,2196,351), Sensor(153,2302,380),
+    ),
   )
 
-  def apply(client: osc.Transmitter.Directed, canvas: Canvas[Ctx], idx: Int): Future[Visual[Ctx]] = {
-    val (nameTrunk, nameFibre) = trunkNameSq(idx)
-    val words     = poemSq(idx)
-    val poemBoxes = poemBoxesSq(idx)
-    val speed     = speedSq(idx)
-    val poly      = polySq(idx)
-    val sensors   = sensorsSq(idx)
-    for {
-      imgTrunk <- loadImage(nameTrunk)
-      imgFibre <- loadImage(nameFibre)
-    } yield {
+  def apply(client: osc.Transmitter.Directed, canvas: Canvas[Ctx]): Future[Visual[Ctx]] = {
+//    val (nameTrunk, nameFibre) = trunkNameSq(idx)
+//    val words     = poemSq(idx)
+//    val poemBoxes = poemBoxesSq(idx)
+//    val speed     = speedSq(idx)
+//    val poly      = polySq(idx)
+//    val sensors   = sensorsSq(idx)
+    val futImages: Seq[Future[Image[Ctx]]] = trunkNameSq.flatMap { case (nameTrunk, nameFibre) =>
+      loadImage(nameTrunk) :: loadImage(nameFibre) :: Nil
+    }
+    Future.sequence(futImages).map { imgSq =>
+      val imgTupSq = imgSq.grouped(2).map { case Seq(imgTrunk, imgFibre) => (imgTrunk, imgFibre) } .toArray
 //      val t = osc.Browser.Transmitter(osc.Browser.Address(57110))
 //      t.connect()
 //      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
 //      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-      val poem = words.iterator.zip(poemBoxes).zipWithIndex.map { case ((s, pb), pi) =>
-        val bridge = if (pi == words.size - 2) -1 else if (pi == words.size - 1) +1 else 0
-        new Word(s, new Rectangle2D.Double(pb.x, pb.y, pb.width, pb.height), bridge = bridge)
-      } .toArray
       new Visual(
-        imgTrunk  = imgTrunk,
-        imgFibre  = imgFibre,
+//        imgTrunk  = imgTrunk,
+//        imgFibre  = imgFibre,
+        imgTupSq  = imgTupSq,
         client    = client,
         canvas    = canvas,
-        speed     = speed,
-        poem      = poem,
-        poly      = poly.toArray,
+//        speed     = speed,
+//        poem      = poem,
+//        poly      = poly.toArray,
         minWords  = 6,
         maxWords  = 10,
-        sensors   = sensors.toArray,
-        verbose = false,
+//        sensors   = sensors.toArray,
+        verbose   = false,
       )
     }
   }
@@ -226,6 +257,9 @@ object Visual extends VisualPlatform {
     var vx: Double  = 0.0
     var vy: Double  = 0.0
 
+    var visible = false
+    var inside  = false
+
     private var fadeState : Int     = 0
     private var fadeStart : Double  = 0.0
     private var fadeStop  : Double  = 0.0
@@ -275,33 +309,78 @@ object Visual extends VisualPlatform {
   }
 }
 class Visual[Ctx <: Graphics2D] private(
-                                         imgTrunk : Image[Ctx],
-                                         imgFibre : Image[Ctx],
+                                         imgTupSq : Array[(Image[Ctx], Image[Ctx])],
                                          client   : osc.Transmitter.Directed,
                                          canvas   : Canvas[Ctx],
-                                         speed    : Double,
-                                         poem     : Array[Word],
-                                         poly     : Array[(Float, Float)],
                                          minWords : Int,
                                          maxWords : Int,
-                                         sensors  : Array[Sensor],
                                          verbose  : Boolean,
                                        ) {
+  private var spaceIdx  = util.Random.nextInt(Visual.NumSpaces) // 0
+
   private val canvasW   = canvas.width
   private val canvasWH  = canvasW / 2
   private val canvasH   = canvas.height
   private val canvasHH  = canvasH / 2
   private val trunkMinX = canvasWH
   private val trunkMinY = canvasHH
-  private val trunkMaxX = imgTrunk.width  - canvasWH
-  private val trunkMaxY = imgTrunk.height - canvasHH
-  private var trunkX    = 570.0.clip(trunkMinX, trunkMaxX) // 0.0
-  private var trunkY    = 180.0.clip(trunkMinY, trunkMaxY) // 0.0
-  private var trunkTgtX = trunkX
-  private var trunkTgtY = trunkY
+
+  private var imgTrunk    : Image[Ctx]    = _
+  private var imgFibre    : Image[Ctx]    = _
+  private var words       : Vec[String]   = _
+  private var poemBoxes   : Vec[IRect2D]  = _
+  private var speed       : Double        = _
+  private var polyList    : List[Vec[(Float, Float)]] = _
+  private var polyShape   : Shape         = _
+  private var sensors     : Vec[Sensor]   = _
+  private var poem        : Array[Word]   = _
+  private var sensorShapes: Vec[Shape]    = _
+  private var trunkMaxX   : Int           = _
+  private var trunkMaxY   : Int           = _
+  private var trunkX    = 570.0
+  private var trunkY    = 180.0
+  private var trunkTgtX   : Double        = _
+  private var trunkTgtY   : Double        = _
+
+  private def spaceIdxUpdated(): Unit = {
+    val (_imgTrunk, _imgFibre) = imgTupSq(spaceIdx)
+    imgTrunk    = _imgTrunk
+    imgFibre    = _imgFibre
+    words       = Visual.poemSq(spaceIdx)
+    poemBoxes   = Visual.poemBoxesSq(spaceIdx)
+    speed       = Visual.speedSq(spaceIdx)
+    polyList    = Visual.polySq(spaceIdx)
+    sensors     = Visual.sensorsSq(spaceIdx)
+    poem        = mkPoem()
+
+    sensorShapes  = sensors.map { s =>
+      val res = new Ellipse2D.Double(s.cx - s.r, s.cy - s.r, s.r * 2, s.r * 2)
+      //    println(res)
+      res
+    }
+
+    trunkMaxX = imgTrunk.width  - canvasWH
+    trunkMaxY = imgTrunk.height - canvasHH
+
+    trunkX    = trunkX.clip(trunkMinX, trunkMaxX)
+    trunkY    = trunkY.clip(trunkMinY, trunkMaxY)
+    trunkTgtX = trunkX
+    trunkTgtY = trunkY
+
+    polyShape = mkPolyShape()
+
+    sendOSC(osc.Message("/trans", spaceIdx))
+  }
+
+  spaceIdxUpdated()
+
+  private def mkPoem() =
+    words.iterator.zip(poemBoxes).zipWithIndex.map { case ((s, pb), pi) =>
+      val bridge = if (pi == words.size - 2) -1 else if (pi == words.size - 1) +1 else 0
+      new Word(s, new Rectangle2D.Double(pb.x, pb.y, pb.width, pb.height), bridge = bridge)
+    } .toArray
+
   private var composite: Composite = Composite.ColorBurn
-//  private val polyColor1: Color = Color.ARGB8(0x20FF0000)
-//  private val polyColor2: Color = Color.RGB4(0xFF0)
   private var mouseX    = -1
   private var mouseY    = -1
 
@@ -310,24 +389,38 @@ class Visual[Ctx <: Graphics2D] private(
   private var placeOp       = 0   // 0 nada, 1 insert, 2 remove, -1 bridge prepare, -2 bridge
   private var placeNextIdx  = 0
 
-  private val sensorShapes  = sensors.map { s =>
-    val res = new Ellipse2D.Double(s.cx - s.r, s.cy - s.r, s.r * 2, s.r * 2)
-//    println(res)
-    res
-  }
-
-  private val polyShape: Shape = {
+  private def mkPoly(pts: Vec[(Float, Float)]): Shape = {
     val res = new Path2D.Double
-    var i = 0
-    while (i < poly.length) {
-      val (x, y) = poly(i)
-      if (i == 0) res.moveTo(x, y)
-      else        res.lineTo(x, y)
-      i += 1
+    var first = true
+    pts.foreach { case (x, y) =>
+      if (first) {
+        res.moveTo(x, y)
+        first = false
+      } else {
+        res.lineTo(x, y)
+      }
     }
     res.closePath()
     res
   }
+
+  private def mkPolyShape(): Shape = {
+    polyList match {
+      case single :: Nil => mkPoly(single)
+      case outer :: inner :: Nil =>
+        val sOut  = mkPoly(outer)
+        val sIn   = mkPoly(inner)
+        val res   = new Area(sOut)
+        res.subtract(new Area(sIn))
+        res
+    }
+  }
+
+  private final val DEBUG = false
+//  private final val TEST  = true
+
+  private val polyColor1: Color = Color.ARGB8(0x20FF0000)
+  private val polyColor2: Color = Color.ARGB8(0x20800080) // Color.RGB4(0xFF0)
 
   def setComposite(name: String): Unit = {
     composite = Composite.parse(name)
@@ -349,20 +442,24 @@ class Visual[Ctx <: Graphics2D] private(
     lastAnimTime = t
   }
 
-  private var sentIdx = 0.0
+  private var sentPanIdx = 0.0
+
+  private def sendOSC(m: osc.Message): Unit =
+    try {
+      client ! m
+    } catch {
+      case NonFatal(ex) =>
+        ex.printStackTrace()
+    }
 
   private def sendTrunkXY(): Unit = {
     val xr  = trunkX.linLin(trunkMinX, trunkMaxX, -1, 1)
     val yr  = trunkY.linLin(trunkMinY, trunkMaxY, -1, 1)
     val a   = atan2(yr, xr)
     val idx = a.linLin(-Pi, +Pi, 0.0, 4.0)
-    if (sentIdx != idx) try {
-      sentIdx = idx
-//      if (!trns.isConnected) {
-//        trns.connect()
-//      }
-//      trns ! message.ControlBusSet(10 -> idx)
-      client /*server.peer*/ ! osc.Message("/pan", idx.toFloat) // message.ControlBusSet(10 -> idx)
+    if (sentPanIdx != idx) try {
+      sentPanIdx = idx
+      sendOSC(osc.Message("/pan", idx.toFloat))
 
     } catch {
       case NonFatal(ex) =>
@@ -402,17 +499,23 @@ class Visual[Ctx <: Graphics2D] private(
     trunkX  = trunkX1
     trunkY  = trunkY1
 
-    ctx.composite = Composite.SourceOver
     val tx = trunkX - trunkMinX
     val ty = trunkY - trunkMinY
-    imgTrunk.draw(ctx, -tx, -ty)
+    // if (!TEST) {
+      ctx.composite = Composite.SourceOver
+      imgTrunk.draw(ctx, -tx, -ty)
+    // }
 
-//    ctx.translate(-tx, -ty)
-//    ctx.fillStyle = polyColor1
-//    sensorShapes.foreach { sh =>
-//      ctx.fillShape(sh)
-//    }
-//    ctx.translate(tx, ty)
+    if (DEBUG) {
+      ctx.translate(-tx, -ty)
+      ctx.fillStyle = polyColor1
+      sensorShapes.foreach { sh =>
+        ctx.fillShape(sh)
+      }
+      ctx.fillStyle = polyColor2
+      ctx.fillShape(polyShape)
+      ctx.translate(tx, ty)
+    }
 
     var pi = 0
     while (pi < numPlaced) {
@@ -421,22 +524,22 @@ class Visual[Ctx <: Graphics2D] private(
       val pT  = animDt * 0.005            // actually we should use power / logarithmic scale
       val fr  = 1.0 - (animDt * 0.001)
       val pS  = 1.0 - pT
-      val vis = {
+      p.visible = {
         val px0 = p.x - tx + pb.getX
         (px0 < canvasW) && (px0 + pb.getWidth > 0.0) && {
           val py0 = p.y - ty + pb.getY
           (py0 < canvasH) && (py0 + pb.getHeight > 0.0)
         }
       }
-      if (vis) {
-        val inside = {
+      if (p.visible) {
+        p.inside = {
           val px0 = p.x - tx + pb.getX
           (px0 >= 0.0) && (px0 + pb.getWidth <= canvasW) && {
             val py0 = p.y - ty + pb.getY
             (py0 >= 0.0) && (py0 + pb.getHeight <= canvasH)
           }
         }
-        if (inside) {
+        if (p.inside) {
           p.vx = (p.vx * pS + dx * pT) * fr
           p.vy = (p.vy * pS + dy * pT) * fr
         } else {
@@ -467,22 +570,26 @@ class Visual[Ctx <: Graphics2D] private(
           p.vx = 0.0
           p.vy = 0.0
         }
-        ctx.fillStyle = p.color(animTime)
-        if (p.shouldRemove) {
-          numPlaced -= 1
-          poem(pi) = poem(numPlaced)
-          poem(numPlaced) = p
-          pi -= 1  // "repeat" index
-          if (verbose) println(s"remove. p = $p, numPlaced = $numPlaced")
-          if (verbose) println(poem.take(numPlaced).map(_.s).mkString("after remove: ", ", ", ""))
+      }
+      val col = p.color(animTime)
+      if (p.shouldRemove) {
+        numPlaced -= 1
+        poem(pi) = poem(numPlaced)
+        poem(numPlaced) = p
+        pi -= 1  // "repeat" index
+        if (verbose) println(s"remove. p = $p, numPlaced = $numPlaced")
+        if (verbose) println(poem.take(numPlaced).map(_.s).mkString("after remove: ", ", ", ""))
 
-        } else {
+      } else if (p.visible) {
+        // if (!TEST) {
+          ctx.fillStyle = col
           ctx.fillText(p.s, p.x - tx, p.y - ty)
-        }
+        // }
 
       } else {
         p.vx *= pS
         p.vy *= pS
+        p.inside = false
       }
 
       pi += 1
@@ -502,15 +609,28 @@ class Visual[Ctx <: Graphics2D] private(
           poem(pi).fadeOut(animTime, dur = fdt)
           placeOp = 0
         }
-      } else if (placeOp == -1) { // XXX TODO: and is visible!
-        var pi = 0
-        while (pi < numPlaced - 1) {
-          val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
-          poem(pi).fadeOut(animTime, dur = fdt)
-          pi += 1
+      } else if (placeOp == -1) {
+        val lastPoemIdx = numPlaced - 1
+        if (poem(lastPoemIdx).inside) {
+          var pi = 0
+          while (pi < lastPoemIdx) {
+            val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+            poem(pi).fadeOut(animTime, dur = fdt)
+            pi += 1
+          }
+          placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 12000.0, 24000.0)
+          placeOp = -2
+          sendOSC(osc.Message("/dwell", 0))
         }
-        placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 12000.0, 24000.0)
-        placeOp = -2
+      } else if (placeOp == -2) {
+        // if (numPlaced == 1) {
+          val p = poem(numPlaced - 1)
+          println(s"numPlaced $numPlaced - word ${p.s} - bridge ${p.bridge}")
+          spaceIdx  = (spaceIdx + p.bridge).wrap(0, Visual.NumSpaces - 1)
+          spaceIdxUpdated()
+          placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
+          placeOp   = 0
+        // }
       }
     }
 
@@ -558,9 +678,10 @@ class Visual[Ctx <: Graphics2D] private(
       }
     }
 
-    ctx.composite = composite //  "color-burn"
-//    ctx.drawImage(img2, 0.0, 0.0)
-    imgFibre.draw(ctx, 0.0, 0.0)
+    // if (!TEST) {
+      ctx.composite = composite //  "color-burn"
+      imgFibre.draw(ctx, 0.0, 0.0)
+    // }
   }
 
   private var dragActive  = false

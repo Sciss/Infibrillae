@@ -25,4 +25,4 @@ val xs = circles.toVector.map { elem =>
 }
 
 val sensors = xs.sortBy(_.hue).map(_.toSensor)
-sensors.grouped(4).map(_.mkString(", ")).toVector.mkString("Vector(\n  ", "\n  ", "\n)")
+sensors.grouped(4).map(_.mkString(", ")).toVector.mkString("Vector(\n  ", ",\n  ", ",\n)")

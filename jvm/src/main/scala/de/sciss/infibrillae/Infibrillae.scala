@@ -36,7 +36,7 @@ object Infibrillae {
   type S = Durable
   type T = Durable.Txn
 
-  val SPACE_IDX = 0 // 2
+//  val SPACE_IDX = 0 // 2
 
   private var universeOpt = Option.empty[Universe[T]]
 
@@ -84,7 +84,7 @@ object Infibrillae {
 
       val t = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", 57120))
       t.connect()
-      Visual(t /*server*/, canvas, idx = SPACE_IDX).onComplete {
+      Visual(t /*server*/, canvas /*, idx = SPACE_IDX*/).onComplete {
         case Success(v) =>
           println("Visual ready.")
           visualOpt = Some(v)
@@ -100,7 +100,7 @@ object Infibrillae {
     SoundProcesses.init()
     Widget        .init()
 
-    val fut = LoadWorkspace(s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
+    val fut = LoadWorkspace() // s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
 
     import Executor.executionContext
 
@@ -201,7 +201,7 @@ object Infibrillae {
             universe.auralSystem.reactNow { implicit tx => {
               case AuralSystem.Running(server) =>
                 tx.afterCommit {
-                  Visual(??? /*server*/, canvas, idx = SPACE_IDX).onComplete {
+                  Visual(??? /*server*/, canvas /*, idx = SPACE_IDX*/).onComplete {
                     case Success(v) =>
                       println("Visual ready.")
 //                      val Palabra(txt, txtX, txtY) = palabras(SPACE_IDX)

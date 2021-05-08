@@ -148,8 +148,8 @@ object TestBufferPrepare {
         val ggStop  = Button("Stop")
         ggStart .clicked ---> r.run
         ggStop  .clicked ---> r.stop
-        ggStart.enabled = booted && r.isIdle
-        ggStop.enabled  = r.isBusy
+        ggStart .enabled = booted && r.isIdle
+        ggStop  .enabled = r.isBusy
         (ggStart, ggStop)
       }
 

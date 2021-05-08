@@ -17,14 +17,15 @@ import com.raquo.laminar.api.L.{documentEvents, render, unsafeWindowOwner}
 import de.sciss.asyncfile.AsyncFile
 import de.sciss.audiofile.AudioFile
 import de.sciss.log.Level
+import de.sciss.lucre.swing.View
 import de.sciss.lucre.synth.Executor
-import de.sciss.proc.LoadWorkspace.T
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 import de.sciss.synth.{Server => SServer}
 import de.sciss.{osc, synth}
 import org.scalajs.dom
 import org.scalajs.dom.html
 
+import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scala.util.{Failure, Success}
@@ -133,8 +134,8 @@ object Infibrillae {
 
     val container: dom.Element = dom.document.getElementById("piece")
 
-//    val fut = LoadWorkspace(s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
-    val fut = TestBufferPrepare()
+    val fut: Future[(Universe[T], View[T])] = LoadWorkspace() // s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
+//    val fut = TestBufferPrepare()
 
     import Executor.executionContext
 
@@ -146,11 +147,11 @@ object Infibrillae {
         val canvas      = new WebCanvas(canvasPeer)
         universe.cursor.step { implicit tx =>
           universe.auralSystem.reactNow { implicit tx => {
-            case AuralSystem.Running(server) =>
+            case AuralSystem.Running(_ /*server*/) =>
               tx.afterCommit {
                 val t = osc.Browser.Transmitter(osc.Browser.Address(57120))
                 t.connect()
-                Visual(t, canvas, idx = SPACE_IDX).onComplete {
+                Visual(t, canvas /*, idx = SPACE_IDX*/).onComplete {
                   case Success(v) =>
                     println("Visual ready.")
                     visualOpt = Some(v)
