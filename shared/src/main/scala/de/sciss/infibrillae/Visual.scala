@@ -608,7 +608,7 @@ class Visual[Ctx <: Graphics2D] private(
         }
       } else if (placeOp == -2) {
         val p = poem(numPlaced - 1)
-        println(s"numPlaced $numPlaced - word ${p.s} - bridge ${p.bridge}")
+        if (verbose) println(s"numPlaced $numPlaced - word ${p.s} - bridge ${p.bridge}")
         spaceIdx  = (spaceIdx + p.bridge).wrap(0, Visual.NumSpaces - 1)
         spaceIdxUpdated()
 
@@ -636,31 +636,27 @@ class Visual[Ctx <: Graphics2D] private(
             val pxOff = pC.x - tx
             val pyOff = pC.y - ty
             val polyB = polyShape.getBounds2D
-            val polyX = polyB.getX
-            val polyY = polyB.getY
-            val polyW = polyB.getWidth
-            val polyH = polyB.getHeight
-            val minTX = max(0, polyX - pxOff)
-            val minTY = max(0, polyY - pyOff)
-            val maxTX = min(imgTrunk.width  - canvasW, minTX + polyW - pb.getWidth )
-            val maxTY = min(imgTrunk.height - canvasH, minTY + polyH - pb.getHeight)
+            val minTx = max(0, polyB.getX - pxOff)
+            val minTy = max(0, polyB.getY - pyOff)
+            val maxTx = min(imgTrunk.width  - canvasW, minTx + polyB.getWidth - pb.getWidth )
+            val maxTy = min(imgTrunk.height - canvasH, minTy + polyB.getHeight - pb.getHeight)
             // println(f"pC.x ${pC.x}%1.1f, pC.y ${pC.y}%1.1f, tx $tx%1.1f, ty $ty%1.1f, polyX $polyX%1.1f, polyY $polyY%1.1f, polyW $polyW%1.1f, polyH $polyH%1.1f, minTX $minTX%1.1f, maxTX $maxTX%1.1f, minTY $minTY%1.1f, maxTY $maxTY%1.1f")
             var attempts = 20
             while (attempts > 0) {
-              val txNew = Random.between(minTX, maxTX)
-              val tyNew = Random.between(minTY, maxTY)
+              val txNew = Random.between(minTx, maxTx)
+              val tyNew = Random.between(minTy, maxTy)
               rTest1.setRect(pxOff + txNew, pyOff + tyNew, pb.getWidth, pb.getHeight)
               if (polyShape.contains(rTest1)) {
                 val dtx   = (txNew + canvasWH) - trunkX
                 val dty   = (tyNew + canvasHH) - trunkY
-                if (verbose)println(f"Found good spot at $txNew%1.1f, $tyNew%1.1f after ${101 - attempts} attempts. dtx $dtx%1.1f, dty $dty%1.1f")
+                if (verbose) println(f"Found good spot at $txNew%1.1f, $tyNew%1.1f after ${20 - attempts} attempts. dtx $dtx%1.1f, dty $dty%1.1f")
                 trunkX   += dtx
                 trunkY   += dty
                 trunkTgtX = trunkX
                 trunkTgtY = trunkY
                 pC.x     += dtx
                 pC.y     += dty
-                attempts  = 0
+                attempts  = 0  // "break"
               } else {
                 attempts -= 1
               }

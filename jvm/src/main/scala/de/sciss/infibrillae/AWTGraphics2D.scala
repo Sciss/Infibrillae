@@ -20,6 +20,16 @@ import java.awt.Rectangle
 
 class AWTGraphics2D(_peer: java.awt.Graphics2D) extends Graphics2D {
   private var _composite: Composite = Composite.SourceOver
+  private var _font: Font = Font("SansSerif", 12)
+  private var _fillStyle: Color = Color.RGB4(0)
+
+  def newPeer(peer: java.awt.Graphics2D): AWTGraphics2D = {
+    val res = new AWTGraphics2D(peer)
+    res.composite = this.composite
+    res.font      = this.font
+    res.fillStyle = this.fillStyle
+    res
+  }
 
   override def composite: Composite = _composite
   override def composite_=(value: Composite): Unit = {
@@ -34,16 +44,12 @@ class AWTGraphics2D(_peer: java.awt.Graphics2D) extends Graphics2D {
   override def translate(tx: Double, ty: Double): Unit =
     _peer.translate(tx, ty)
 
-  private var _font: Font = Font("SansSerif", 12)
-
   override def font: Font = _font
   override def font_=(value: Font): Unit = {
     _font = value
     val f = new java.awt.Font(value.family, java.awt.Font.PLAIN, value.sizePx)
     _peer.setFont(f)
   }
-
-  private var _fillStyle: Color = Color.RGB4(0)
 
   override def fillStyle: Color = _fillStyle
   override def fillStyle_=(value: Color): Unit = {

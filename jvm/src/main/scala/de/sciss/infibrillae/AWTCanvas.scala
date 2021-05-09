@@ -58,7 +58,7 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
         buf = new BufferedImage(getWidth, getHeight, BufferedImage.TYPE_INT_ARGB)
         val gi = buf.createGraphics()
         gi.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-        g2w = new AWTGraphics2D(gi)
+        g2w = if (g2w == null) new AWTGraphics2D(gi) else g2w.newPeer(gi)
       }
 
 //      val g2  = g.asInstanceOf[java.awt.Graphics2D]

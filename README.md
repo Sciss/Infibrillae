@@ -39,6 +39,24 @@ You must run a web server, such as
 
 (then open its default page, like [127.0.0.1:8000](http://127.0.0.1:8000))
 
+## Navigation
+
+Moving the mouse over the canvas traverses the virtual spaces. The words of the poems appear and disappear
+independently but follow the movement around (with friction). Keeping the mouse button pressed allows one to
+move it outside the canvas without causing motion of the virtual space.
+When bridging words appear, they are visible
+by reddish colour. Bridging can be triggered explicitly by pressing the `Enter` key (canvas must have focus by
+clicking with the mouse0. The view port of the  virtual space determines the spatial mix of the sound. Eight
+invisible sensor trigger areas are designated (sound implementation pending).
+
+## Desktop version
+
+As there are currently some issues with the browser version, and during development, the desktop version
+can be run. E.g. in IntelliJ run the `Infibrillae` object in the `jvm` project. This opens a window with
+the visual presentation of the piece, and currently assumes that the workspace is actually run separately
+in Mellite, connecting to it via OSC. In the future, we may have the option to launch the workspace directly
+in the project, as is the case for the browser version.
+
 ## notes
 
 I use this to fix COOP/COEP things for Firefox (not sure it's correct, but seems to be working):
@@ -49,3 +67,5 @@ Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains
 Header set Cross-Origin-Opener-Policy: same-origin
 Header set Cross-Origin-Embedder-Policy: require-corp
 ```
+
+Chromium has very bad and choppy sound performance on Linux when running Pulse through Jack Audio. Avoid that.
