@@ -15,7 +15,7 @@ package de.sciss.infibrillae
 
 import de.sciss.file._
 
-import java.awt.event.MouseAdapter
+import java.awt.event.{KeyAdapter, MouseAdapter}
 import java.awt.image.BufferedImage
 import java.awt.{Graphics, RenderingHints, event}
 import javax.imageio.ImageIO
@@ -127,5 +127,16 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
     }
     _peer.addMouseListener      (ma)
     _peer.addMouseMotionListener(ma)
+  }
+
+  override def addKeyListener(kl: KeyListener): Unit = {
+    val ka = new KeyAdapter {
+      override def keyPressed(e: event.KeyEvent): Unit =
+        kl.keyDown(new AWTKeyEvent(e))
+
+      override def keyReleased(e: event.KeyEvent): Unit =
+        kl.keyUp(new AWTKeyEvent(e))
+    }
+    _peer.addKeyListener(ka)
   }
 }

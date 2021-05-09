@@ -43,4 +43,13 @@ class WebCanvas(_peer: html.Canvas) extends Canvas[WebGraphics2D] { self =>
       ml.mouseMove(new WebMouseEvent(e, self))
     })
   }
+
+  override def addKeyListener(kl: KeyListener): Unit = {
+    _peer.addEventListener[dom.raw.KeyboardEvent]("keydown", { e =>
+      if (!e.repeat) kl.keyDown(new WebKeyEvent(e))
+    })
+    _peer.addEventListener[dom.raw.KeyboardEvent]("keyup", { e =>
+      kl.keyDown(new WebKeyEvent(e))
+    })
+  }
 }

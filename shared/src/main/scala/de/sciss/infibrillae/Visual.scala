@@ -179,33 +179,17 @@ object Visual extends VisualPlatform {
   )
 
   def apply(client: osc.Transmitter.Directed, canvas: Canvas[Ctx]): Future[Visual[Ctx]] = {
-//    val (nameTrunk, nameFibre) = trunkNameSq(idx)
-//    val words     = poemSq(idx)
-//    val poemBoxes = poemBoxesSq(idx)
-//    val speed     = speedSq(idx)
-//    val poly      = polySq(idx)
-//    val sensors   = sensorsSq(idx)
     val futImages: Seq[Future[Image[Ctx]]] = trunkNameSq.flatMap { case (nameTrunk, nameFibre) =>
       loadImage(nameTrunk) :: loadImage(nameFibre) :: Nil
     }
     Future.sequence(futImages).map { imgSq =>
       val imgTupSq = imgSq.grouped(2).map { case Seq(imgTrunk, imgFibre) => (imgTrunk, imgFibre) } .toArray
-//      val t = osc.Browser.Transmitter(osc.Browser.Address(57110))
-//      t.connect()
-//      val canvas  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
-//      val ctx     = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
       new Visual(
-//        imgTrunk  = imgTrunk,
-//        imgFibre  = imgFibre,
         imgTupSq  = imgTupSq,
         client    = client,
         canvas    = canvas,
-//        speed     = speed,
-//        poem      = poem,
-//        poly      = poly.toArray,
         minWords  = 6,
         maxWords  = 10,
-//        sensors   = sensors.toArray,
         verbose   = false,
       )
     }
@@ -623,14 +607,36 @@ class Visual[Ctx <: Graphics2D] private(
           sendOSC(osc.Message("/dwell", 0))
         }
       } else if (placeOp == -2) {
-        // if (numPlaced == 1) {
-          val p = poem(numPlaced - 1)
-          println(s"numPlaced $numPlaced - word ${p.s} - bridge ${p.bridge}")
-          spaceIdx  = (spaceIdx + p.bridge).wrap(0, Visual.NumSpaces - 1)
-          spaceIdxUpdated()
-          placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
-          placeOp   = 0
-        // }
+        val p = poem(numPlaced - 1)
+        println(s"numPlaced $numPlaced - word ${p.s} - bridge ${p.bridge}")
+        spaceIdx  = (spaceIdx + p.bridge).wrap(0, Visual.NumSpaces - 1)
+        spaceIdxUpdated()
+
+        // now we find the counter word
+        val counterBridge = -p.bridge
+        var pi = 0
+        while (pi < poem.length) {
+          val pC = poem(pi)
+          if (pC.bridge == counterBridge) {
+            pC.x   = p.x + (p.r.getWidth  - pC.r.getWidth )/2
+            pC.y   = p.y + (p.r.getHeight - pC.r.getHeight)/2
+            pC.vx  = 0.0
+            pC.vy  = 0.0
+            val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8 + 3.0, 4.8 + 3.0)
+            placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 8000.0, 24000.0)
+            pC.fadeOut(animTime, dur = fdt)
+            // now swap with end to avoid duplicate choices
+            poem(pi)  = poem(0)
+            poem(0)   = pC
+            if (verbose) println(s"insert counter bridge. pC = $pC")
+            numPlaced = 1
+            pi = poem.length  // "break"
+          } else {
+            pi += 1
+          }
+        }
+        placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
+        placeOp   = 0
       }
     }
 
@@ -687,6 +693,24 @@ class Visual[Ctx <: Graphics2D] private(
   private var dragActive  = false
 
   var mouseEnabled = true
+
+  canvas.addKeyListener(new KeyListener {
+    override def keyDown(e: KeyEvent): Unit =
+      if (e.key == "Enter" && placeOp == 0 && (numPlaced < maxWords)) {
+        var pi = numPlaced
+        while (pi < poem.length) {
+          if (poem(pi).bridge == 1) {
+            placeOp = 1
+            placeNextIdx = pi
+            pi = poem.length  // "break"
+          } else {
+            pi += 1
+          }
+        }
+      }
+
+      override def keyUp(e: KeyEvent): Unit = ()
+  })
 
   canvas.addMouseListener(new MouseListener {
     override def mouseDown(e: MouseEvent): Unit = {

@@ -1,5 +1,5 @@
 /*
- *  Canvas.scala
+ *  MouseEvent.scala
  *  (in|fibrillae)
  *
  *  Copyright (c) 2020-2021 Hanns Holger Rutz. All rights reserved.
@@ -13,12 +13,12 @@
 
 package de.sciss.infibrillae
 
-trait Canvas[Ctx] {
-  def width : Int
-  def height: Int
+trait KeyEvent {
+  def isAltDown     : Boolean
+  def isShiftDown   : Boolean
+  def isControlDown : Boolean
 
-  def repaint(fun: (Ctx, Double) => Unit): Unit
+  def key: String
 
-  def addMouseListener(ml: MouseListener): Unit
-  def addKeyListener  (kl: KeyListener  ): Unit
+  def preventDefault(): Unit
 }

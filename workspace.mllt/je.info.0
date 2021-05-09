@@ -28,3 +28,7 @@
 2021-05-06 22:13:00.461 UTC INFO [/home/hhrutz/Documents/devel/infibrillae/workspace.mllt] Start verify all databases
 2021-05-06 22:13:03.686 UTC INFO [/home/hhrutz/Documents/devel/infibrillae/workspace.mllt] End verify all databases
 2021-05-06 22:25:53.340 UTC INFO [/home/hhrutz/Documents/devel/infibrillae/workspace.mllt] Loaded missing expiration data from file 0xb
+2021-05-08 22:00:15.821 UTC INFO [/home/hhrutz/Documents/devel/infibrillae/workspace.mllt] Start verify of data files
+2021-05-08 22:13:18.465 UTC INFO [/home/hhrutz/Documents/devel/infibrillae/workspace.mllt] End verify of data files
+2021-05-08 22:13:18.465 UTC INFO [/home/hhrutz/Documents/devel/infibrillae/workspace.mllt] Start verify all databases
+2021-05-08 22:13:21.766 UTC INFO [/home/hhrutz/Documents/devel/infibrillae/workspace.mllt] End verify all databases
