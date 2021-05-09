@@ -139,4 +139,6 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
     }
     _peer.addKeyListener(ka)
   }
+
+  override def requestFocus(): Unit = _peer.requestFocus()
 }

@@ -30,8 +30,10 @@ import scala.swing.{Dimension, FlowPanel, ToggleButton}
 import scala.util.{Failure, Success}
 
 object Infibrillae {
-  def main(args: Array[String]): Unit =
+  def main(args: Array[String]): Unit = {
+    Locale.setDefault(Locale.US)
     runConnect()
+  }
 
   type S = Durable
   type T = Durable.Txn

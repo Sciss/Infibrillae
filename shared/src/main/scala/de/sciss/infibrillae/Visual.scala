@@ -21,7 +21,7 @@ import de.sciss.osc
 import de.sciss.synth.UGenSource.Vec
 
 import scala.concurrent.Future
-import scala.math.{Pi, atan2, min}
+import scala.math.{Pi, atan2, min, max}
 import scala.util.Random
 import scala.util.control.NonFatal
 
@@ -602,7 +602,7 @@ class Visual[Ctx <: Graphics2D] private(
             poem(pi).fadeOut(animTime, dur = fdt)
             pi += 1
           }
-          placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 12000.0, 24000.0)
+          placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 12000.0, 16000.0)
           placeOp = -2
           sendOSC(osc.Message("/dwell", 0))
         }
@@ -622,14 +622,50 @@ class Visual[Ctx <: Graphics2D] private(
             pC.y   = p.y + (p.r.getHeight - pC.r.getHeight)/2
             pC.vx  = 0.0
             pC.vy  = 0.0
-            val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8 + 3.0, 4.8 + 3.0)
-            placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 8000.0, 24000.0)
+            val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8 + 5.0, 4.8 + 5.0)
+            placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 10000.0, 20000.0)
             pC.fadeOut(animTime, dur = fdt)
             // now swap with end to avoid duplicate choices
             poem(pi)  = poem(0)
             poem(0)   = pC
             if (verbose) println(s"insert counter bridge. pC = $pC")
             numPlaced = 1
+
+            // now let's try to move the canvas so that the new region is in the interior
+            val pb    = pC.r
+            val pxOff = pC.x - tx
+            val pyOff = pC.y - ty
+            val polyB = polyShape.getBounds2D
+            val polyX = polyB.getX
+            val polyY = polyB.getY
+            val polyW = polyB.getWidth
+            val polyH = polyB.getHeight
+            val minTX = max(0, polyX - pxOff)
+            val minTY = max(0, polyY - pyOff)
+            val maxTX = min(imgTrunk.width  - canvasW, minTX + polyW - pb.getWidth )
+            val maxTY = min(imgTrunk.height - canvasH, minTY + polyH - pb.getHeight)
+            // println(f"pC.x ${pC.x}%1.1f, pC.y ${pC.y}%1.1f, tx $tx%1.1f, ty $ty%1.1f, polyX $polyX%1.1f, polyY $polyY%1.1f, polyW $polyW%1.1f, polyH $polyH%1.1f, minTX $minTX%1.1f, maxTX $maxTX%1.1f, minTY $minTY%1.1f, maxTY $maxTY%1.1f")
+            var attempts = 20
+            while (attempts > 0) {
+              val txNew = Random.between(minTX, maxTX)
+              val tyNew = Random.between(minTY, maxTY)
+              rTest1.setRect(pxOff + txNew, pyOff + tyNew, pb.getWidth, pb.getHeight)
+              if (polyShape.contains(rTest1)) {
+                val dtx   = (txNew + canvasWH) - trunkX
+                val dty   = (tyNew + canvasHH) - trunkY
+                if (verbose)println(f"Found good spot at $txNew%1.1f, $tyNew%1.1f after ${101 - attempts} attempts. dtx $dtx%1.1f, dty $dty%1.1f")
+                trunkX   += dtx
+                trunkY   += dty
+                trunkTgtX = trunkX
+                trunkTgtY = trunkY
+                pC.x     += dtx
+                pC.y     += dty
+                attempts  = 0
+              } else {
+                attempts -= 1
+              }
+            }
+
             pi = poem.length  // "break"
           } else {
             pi += 1
@@ -695,7 +731,8 @@ class Visual[Ctx <: Graphics2D] private(
   var mouseEnabled = true
 
   canvas.addKeyListener(new KeyListener {
-    override def keyDown(e: KeyEvent): Unit =
+    override def keyDown(e: KeyEvent): Unit = {
+      // println(s"key = ${e.key}")
       if (e.key == "Enter" && placeOp == 0 && (numPlaced < maxWords)) {
         var pi = numPlaced
         while (pi < poem.length) {
@@ -708,14 +745,16 @@ class Visual[Ctx <: Graphics2D] private(
           }
         }
       }
+    }
 
-      override def keyUp(e: KeyEvent): Unit = ()
+    override def keyUp(e: KeyEvent): Unit = ()
   })
 
   canvas.addMouseListener(new MouseListener {
     override def mouseDown(e: MouseEvent): Unit = {
       dragActive = true
       e.preventDefault()
+      canvas.requestFocus()
     }
 
     override def mouseUp(e: MouseEvent): Unit = {
@@ -742,6 +781,7 @@ class Visual[Ctx <: Graphics2D] private(
     }
   })
 
+  canvas.requestFocus()
   canvas.repaint((ctx, _) => ctx.font = Visual.font)
 
 //  ctx.font = "36px VoltaireRegular"

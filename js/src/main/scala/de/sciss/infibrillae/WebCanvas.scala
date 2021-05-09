@@ -52,4 +52,6 @@ class WebCanvas(_peer: html.Canvas) extends Canvas[WebGraphics2D] { self =>
       kl.keyDown(new WebKeyEvent(e))
     })
   }
+
+  override def requestFocus(): Unit = _peer.focus()
 }
