@@ -291,6 +291,8 @@ object Visual extends VisualPlatform {
       vy = 0.0
     }
   }
+
+  private final val AUTOMOTIVE_TIMEOUT = 30000L // milliseconds
 }
 class Visual[Ctx <: Graphics2D] private(
                                          imgTupSq : Array[(Image[Ctx], Image[Ctx])],
@@ -300,7 +302,7 @@ class Visual[Ctx <: Graphics2D] private(
                                          maxWords : Int,
                                          verbose  : Boolean,
                                        ) {
-  private var spaceIdx  = util.Random.nextInt(Visual.NumSpaces) // 0
+  private var spaceIdx  = Random.nextInt(Visual.NumSpaces) // 0
 
   private val canvasW   = canvas.width
   private val canvasWH  = canvasW / 2
@@ -372,6 +374,12 @@ class Visual[Ctx <: Graphics2D] private(
   private var placeTime     = 0.0
   private var placeOp       = 0   // 0 nada, 1 insert, 2 remove, -1 bridge prepare, -2 bridge
   private var placeNextIdx  = 0
+
+  private var mouseTimeOut    = Long.MaxValue
+  private var automotive      = false
+  private var automotiveDx    = 0.0
+  private var automotiveDy    = 0.0
+  private var automotiveRest  = Long.MaxValue
 
   private def mkPoly(pts: Vec[(Float, Float)]): Shape = {
     val res = new Path2D.Double
@@ -471,13 +479,48 @@ class Visual[Ctx <: Graphics2D] private(
   private val rTest2 = new Rectangle2D.Double
 
   def paint(ctx: Ctx, animTime: Double): Unit = {
-    val animDt = min(100.0, animTime - lastAnimTime)
-    lastAnimTime = animTime
+    val animDt    = min(100.0, animTime - lastAnimTime)
+    lastAnimTime  = animTime
+    val wT        = animDt * speed // 0.01
+    // println(s"wT $wT")
 
-    val wT  = animDt * speed // 0.01
-    val wS  = 1.0 - wT
-    val trunkX1  = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
-    val trunkY1  = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
+    val now = System.currentTimeMillis()
+    if (automotive) {
+      if (now > automotiveRest) {
+        // mouseActive()
+        mouseTimeOut  = now + Random.between(20, 30) * 1000L
+        automotive    = false
+        canvas.cursor = Cursor.CrossHair
+
+      } else {
+        if (placeOp >= 0) {
+          // brownian motion
+          //      val biasX     = if (trunkX < imgTrunk.width /2) 0.5 else -0.5
+          //      val biasY     = if (trunkY < imgTrunk.height/2) 0.5 else -0.5
+          val biasX     = 0.5 - (trunkX / imgTrunk.width )
+          val biasY     = 0.5 - (trunkY / imgTrunk.height)
+          automotiveDx  = (automotiveDx + Random.between(-8.0 + biasX, 8.0 + biasX) * wT).clip(-150.0, +150.0)
+          automotiveDy  = (automotiveDy + Random.between(-8.0 + biasY, 8.0 + biasY) * wT).clip(-150.0, +150.0)
+          val dx        = automotiveDx // * wT
+          val dy        = automotiveDy // * wT
+          trunkTgtX     = (trunkX + dx).clip(trunkMinX, trunkMaxX)
+          trunkTgtY     = (trunkY + dy).clip(trunkMinY, trunkMaxY)
+        }
+      }
+
+    } else {
+      if (now > mouseTimeOut) {
+        automotive      = true
+        automotiveRest  = now + Random.between(60, 120) * 1000L
+        automotiveDx    = 0.0
+        automotiveDy    = 0.0
+        canvas.cursor   = Cursor.Hidden
+      }
+    }
+
+    val wS        = 1.0 - wT
+    val trunkX1   = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
+    val trunkY1   = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
     val dx  = trunkX1 - trunkX
     val dy  = trunkY1 - trunkY
     trunkX  = trunkX1
@@ -583,13 +626,13 @@ class Visual[Ctx <: Graphics2D] private(
       if (placeOp == 0) {
         placeOp = if (numPlaced < minWords) 1 else if (numPlaced == maxWords) 2 else Random.nextInt(2) + 1
         // note: should be larger than fade-time, otherwise we need additional logic
-        placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
+        placeTime = animTime + Random.between(6000.0, 24000.0)
         if (placeOp == 1) {
           placeNextIdx = Random.nextInt(poem.length - numPlaced) + numPlaced
 
         } else if (placeOp == 2) {
           val pi  = Random.nextInt(numPlaced)
-          val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+          val fdt = Random.between(1.8, 4.8)
           poem(pi).fadeOut(animTime, dur = fdt)
           placeOp = 0
         }
@@ -598,11 +641,11 @@ class Visual[Ctx <: Graphics2D] private(
         if (poem(lastPoemIdx).inside) {
           var pi = 0
           while (pi < lastPoemIdx) {
-            val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+            val fdt = Random.between(1.8, 4.8)
             poem(pi).fadeOut(animTime, dur = fdt)
             pi += 1
           }
-          placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 12000.0, 16000.0)
+          placeTime = animTime + Random.between(12000.0, 16000.0)
           placeOp = -2
           sendOSC(osc.Message("/dwell", 0))
         }
@@ -622,8 +665,8 @@ class Visual[Ctx <: Graphics2D] private(
             pC.y   = p.y + (p.r.getHeight - pC.r.getHeight)/2
             pC.vx  = 0.0
             pC.vy  = 0.0
-            val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8 + 5.0, 4.8 + 5.0)
-            placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 10000.0, 20000.0)
+            val fdt = Random.between(1.8 + 5.0, 4.8 + 5.0)
+            placeTime = animTime + Random.between(10000.0, 20000.0)
             pC.fadeOut(animTime, dur = fdt)
             // now swap with end to avoid duplicate choices
             poem(pi)  = poem(0)
@@ -667,7 +710,7 @@ class Visual[Ctx <: Graphics2D] private(
             pi += 1
           }
         }
-        placeTime = animTime + Random.nextDouble().linLin(0.0, 1.0, 6000.0, 24000.0)
+        placeTime = animTime + Random.between(6000.0, 24000.0)
         placeOp   = 0
       }
     }
@@ -700,7 +743,7 @@ class Visual[Ctx <: Graphics2D] private(
         p.y   = ry - pb.getY
         p.vx  = 0.0
         p.vy  = 0.0
-        val fdt = Random.nextDouble().linLin(0.0, 1.0, 1.8, 4.8)
+        val fdt = Random.between(1.8, 4.8)
         p.fadeIn(animTime, dur = fdt)
         // now swap with end to avoid duplicate choices
         poem(pi)        = poem(numPlaced)
@@ -708,6 +751,11 @@ class Visual[Ctx <: Graphics2D] private(
         if (verbose) println(s"insert. p = $p, numPlaced = $numPlaced")
         numPlaced += 1
         if (verbose) println(poem.take(numPlaced).map(_.s).mkString("after insert: ", ", ", ""))
+        // "ralentir"
+//        automotiveDx = 0.0
+//        automotiveDy = 0.0
+        automotiveDx *= 0.5
+        automotiveDy *= 0.5
         if (p.bridge == 0) {
           placeOp = 0
         } else {
@@ -746,10 +794,19 @@ class Visual[Ctx <: Graphics2D] private(
     override def keyUp(e: KeyEvent): Unit = ()
   })
 
+  private def mouseActive(): Unit = {
+    mouseTimeOut = System.currentTimeMillis() + Visual.AUTOMOTIVE_TIMEOUT
+    if (automotive) {
+      automotive    = false
+      canvas.cursor = Cursor.CrossHair
+    }
+  }
+
   canvas.addMouseListener(new MouseListener {
     override def mouseDown(e: MouseEvent): Unit = {
       dragActive = true
       e.preventDefault()
+      mouseActive()
       canvas.requestFocus()
     }
 
@@ -757,11 +814,13 @@ class Visual[Ctx <: Graphics2D] private(
       if (dragActive) {
         dragActive = false
         e.preventDefault()
+        mouseActive()
       }
     }
 
     override def mouseMove(e: MouseEvent): Unit = {
       e.preventDefault()
+      mouseActive()
       if (!dragActive && mouseEnabled) {
 //        val b = canvas.getBoundingClientRect
         val mx = e.x // e.clientX - b.left
@@ -777,7 +836,9 @@ class Visual[Ctx <: Graphics2D] private(
     }
   })
 
+  canvas.cursor = Cursor.CrossHair
   canvas.requestFocus()
+  mouseActive() // set time-out
   canvas.repaint((ctx, _) => ctx.font = Visual.font)
 
 //  ctx.font = "36px VoltaireRegular"

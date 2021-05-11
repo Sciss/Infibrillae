@@ -21,6 +21,11 @@ import java.awt.{Graphics, RenderingHints, event}
 import javax.imageio.ImageIO
 import javax.swing.{JComponent, Timer}
 
+object AWTCanvas {
+  private lazy val hiddenCursor: java.awt.Cursor =
+    java.awt.Toolkit.getDefaultToolkit.createCustomCursor(
+      new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB), new java.awt.Point(0, 0), "hidden")
+}
 class AWTCanvas extends Canvas[AWTGraphics2D] {
   private var animFunArr    = new Array[(AWTGraphics2D, Double) => Unit](8)
   private var animFunNum    = 0
@@ -141,4 +146,16 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
   }
 
   override def requestFocus(): Unit = _peer.requestFocus()
-}
+
+  private var _cursor: Cursor = Cursor.Default
+
+  override def cursor: Cursor = _cursor
+  override def cursor_=(value: Cursor): Unit = if (_cursor != value) {
+    _cursor = value
+    val awtC = value match {
+      case Cursor.Default   => java.awt.Cursor.getDefaultCursor
+      case Cursor.CrossHair => java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.CROSSHAIR_CURSOR)
+      case Cursor.Hidden    => AWTCanvas.hiddenCursor
+    }
+    _peer.setCursor(awtC)
+  }}

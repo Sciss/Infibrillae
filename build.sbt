@@ -1,6 +1,6 @@
 import sbtcrossproject.Platform
 
-lazy val projectVersion = "0.1.18-SNAPSHOT"
+lazy val projectVersion = "0.2.0-SNAPSHOT"
 
 lazy val deps = new {
   val main = new {

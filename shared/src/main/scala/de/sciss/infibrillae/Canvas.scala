@@ -23,4 +23,6 @@ trait Canvas[Ctx] {
   def addKeyListener  (kl: KeyListener  ): Unit
 
   def requestFocus(): Unit
+
+  var cursor: Cursor
 }

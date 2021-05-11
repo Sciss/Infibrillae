@@ -73,6 +73,7 @@
       }
 
       #canvas {
+        outline:none;  // cf. https://stackoverflow.com/questions/3015523/remove-or-disable-focus-border-of-browser-via-javascript
       }
 
       #visual {
@@ -100,11 +101,15 @@
     see <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/1111185" target="_blank">project documentation</a>.
     Minimum browser requirement: Firefox&nbsp;79, Chrome/Chromium&nbsp;68. Mobile phones currently not supported.
 </p><p>
-    Press the <em>Start</em> button to begin. <strong>Note</strong> that currently it can take several minutes until you hear the
-    first bleeps and noises (or repeatedly click on the circular 'bang' button).
+    Press the <em>Start</em> button to begin. <strong>Note</strong> that it may take some time until you hear the
+    first bleeps and noises.
     Please feel invited to keep the page open while turning to other activities on your
-    computer. During <em>xCoAx</em> review, if you revisit this page, please purge the cache and
+    computer. While the work is marked as in-progress, if you revisit this page, please purge the cache and
     <strong>explicitly reload</strong> (<kbd>ctrl</kbd>-<kbd>R</kbd>) the page in the browser, as there might be updates. Thank you!
+</p><p>
+    Also note that sound may be choppy sometimes, it seems the current web audio implementation comes to its limits.
+    This happens for example on Chromium&nbsp;90 Linux. We have seen very good results with recent Firefox&nbsp;88.
+    We are planning to address this, and also to release a desktop downloadable version of the piece.
 </p><p>
     The piece released under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)
     license. The underlying software released under AGPL and GPL licenses. The font is Voltaire-Regular by
@@ -112,7 +117,8 @@
     Please refer to
     <a class="infib-ext" href="https://github.com/Sciss/Infibrillae" target="_blank">source repository</a>.
 </p>
-<div id="visual"><canvas id="canvas" width="400" height="400"></canvas></div>
+<!-- cf. https://stackoverflow.com/questions/12886286/addeventlistener-for-keydown-on-canvas -->
+<div id="visual"><canvas id="canvas" width="400" height="400" tabindex='1'></canvas></div>
 <div id="piece"></div>
 <!--
 <div id='controls'>

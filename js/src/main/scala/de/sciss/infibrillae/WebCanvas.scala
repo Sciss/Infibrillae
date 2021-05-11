@@ -46,6 +46,7 @@ class WebCanvas(_peer: html.Canvas) extends Canvas[WebGraphics2D] { self =>
 
   override def addKeyListener(kl: KeyListener): Unit = {
     _peer.addEventListener[dom.raw.KeyboardEvent]("keydown", { e =>
+      // println(s"KEY = '${e.key}")
       if (!e.repeat) kl.keyDown(new WebKeyEvent(e))
     })
     _peer.addEventListener[dom.raw.KeyboardEvent]("keyup", { e =>
@@ -54,4 +55,12 @@ class WebCanvas(_peer: html.Canvas) extends Canvas[WebGraphics2D] { self =>
   }
 
   override def requestFocus(): Unit = _peer.focus()
+
+  private var _cursor: Cursor = Cursor.Default
+
+  override def cursor: Cursor = _cursor
+  override def cursor_=(value: Cursor): Unit = if (_cursor != value) {
+    _cursor = value
+    _peer.style.cursor = value.name
+  }
 }

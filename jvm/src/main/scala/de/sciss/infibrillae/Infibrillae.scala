@@ -115,7 +115,7 @@ object Infibrillae {
           val canvasPeer: JComponent = canvas.peer
           canvasPeer.setPreferredSize(new Dimension(400, 400))
           canvasPeer.setOpaque(true)
-          canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
+//          canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
 //          canvasPeer.setCursor(Toolkit.getDefaultToolkit.createCustomCursor(
 //            new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB), new Point(0, 0), "hidden"))
           val ggRecord = new ToggleButton("Record") { toggle =>
