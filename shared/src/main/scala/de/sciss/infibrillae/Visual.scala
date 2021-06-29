@@ -13,15 +13,16 @@
 
 package de.sciss.infibrillae
 
-import de.sciss.infibrillae.Visual.{Sensor, Word}
+import de.sciss.infibrillae.Visual.{NumSensors, Sensor, Word}
 import de.sciss.infibrillae.geom.{Area, Ellipse2D, Path2D, Rectangle2D, Shape}
 import de.sciss.lucre.synth.Executor.executionContext
 import de.sciss.numbers.Implicits._
 import de.sciss.osc
 import de.sciss.synth.UGenSource.Vec
 
+import java.util
 import scala.concurrent.Future
-import scala.math.{Pi, atan2, min, max}
+import scala.math.{Pi, atan2, max, min}
 import scala.util.Random
 import scala.util.control.NonFatal
 
@@ -36,10 +37,22 @@ object Visual extends VisualPlatform {
     ("trunk15.jpg"    , "fibre4162crop1.jpg"),
   )
 
-  private val speedSq = Seq(
+  private val speedSq: Seq[Double] = Seq(
     0.005,
     0.002,
     0.006,
+  )
+
+  private val sensorAtkSq: Seq[Float] = Seq(
+    0.2f,
+    0.3f,
+    0.25f,
+  )
+
+  private val sensorRlsSq: Seq[Float] = Seq(
+    0.07f,
+    0.06f,
+    0.05f,
   )
 
   val poemSq: Seq[Vec[String]] = Seq(
@@ -162,6 +175,8 @@ object Visual extends VisualPlatform {
 
   // defined by a circle region
   case class Sensor(cx: Int, cy: Int, r: Int)
+
+  final val NumSensors = 8
 
   private val sensorsSq: Seq[Vec[Sensor]] = Seq(
     Vector(
@@ -313,30 +328,35 @@ class Visual[Ctx <: Graphics2D] private(
 
   private var imgTrunk    : Image[Ctx]    = _
   private var imgFibre    : Image[Ctx]    = _
-  private var words       : Vec[String]   = _
-  private var poemBoxes   : Vec[IRect2D]  = _
+  private var words       : Array[String] = _
+  private var poemBoxes   : Array[IRect2D]= _
   private var speed       : Double        = _
   private var polyList    : List[Vec[(Float, Float)]] = _
   private var polyShape   : Shape         = _
-  private var sensors     : Vec[Sensor]   = _
+  private var sensors     : Array[Sensor] = _
   private var poem        : Array[Word]   = _
-  private var sensorShapes: Vec[Shape]    = _
+  private var sensorShapes: Array[Shape]  = _
   private var trunkMaxX   : Int           = _
   private var trunkMaxY   : Int           = _
   private var trunkX    = 570.0
   private var trunkY    = 180.0
   private var trunkTgtX   : Double        = _
   private var trunkTgtY   : Double        = _
+  private val sensorData  : Array[Float]  = new Array(Visual.NumSensors)
+  private var sensorAtk   : Float         = _
+  private var sensorRls   : Float         = _
 
   private def spaceIdxUpdated(): Unit = {
     val (_imgTrunk, _imgFibre) = imgTupSq(spaceIdx)
     imgTrunk    = _imgTrunk
     imgFibre    = _imgFibre
-    words       = Visual.poemSq(spaceIdx)
-    poemBoxes   = Visual.poemBoxesSq(spaceIdx)
-    speed       = Visual.speedSq(spaceIdx)
-    polyList    = Visual.polySq(spaceIdx)
-    sensors     = Visual.sensorsSq(spaceIdx)
+    words       = Visual.poemSq     (spaceIdx).toArray
+    poemBoxes   = Visual.poemBoxesSq(spaceIdx).toArray
+    speed       = Visual.speedSq    (spaceIdx)
+    polyList    = Visual.polySq     (spaceIdx)
+    sensors     = Visual.sensorsSq  (spaceIdx).toArray
+    sensorAtk   = Visual.sensorAtkSq(spaceIdx)
+    sensorRls   = Visual.sensorRlsSq(spaceIdx)
     poem        = mkPoem()
 
     sensorShapes  = sensors.map { s =>
@@ -344,6 +364,8 @@ class Visual[Ctx <: Graphics2D] private(
       //    println(res)
       res
     }
+
+    util.Arrays.fill(sensorData, 0.0f)
 
     trunkMaxX = imgTrunk.width  - canvasWH
     trunkMaxY = imgTrunk.height - canvasHH
@@ -362,13 +384,13 @@ class Visual[Ctx <: Graphics2D] private(
 
   private def mkPoem() =
     words.iterator.zip(poemBoxes).zipWithIndex.map { case ((s, pb), pi) =>
-      val bridge = if (pi == words.size - 2) -1 else if (pi == words.size - 1) +1 else 0
+      val bridge = if (pi == words.length - 2) -1 else if (pi == words.length - 1) +1 else 0
       new Word(s, new Rectangle2D.Double(pb.x, pb.y, pb.width, pb.height), bridge = bridge)
     } .toArray
 
   private var composite: Composite = Composite.ColorBurn
-  private var mouseX    = -1
-  private var mouseY    = -1
+  private var mouseX    = -1.0
+  private var mouseY    = -1.0
 
   private var numPlaced     = 0
   private var placeTime     = 0.0
@@ -408,11 +430,12 @@ class Visual[Ctx <: Graphics2D] private(
     }
   }
 
-  private final val DEBUG = false
+  private final val DEBUG = true
 //  private final val TEST  = true
 
   private val polyColor1: Color = Color.ARGB8(0x20FF0000)
   private val polyColor2: Color = Color.ARGB8(0x20800080) // Color.RGB4(0xFF0)
+  private val mouseColor: Color = Color.ARGB8(0x80800080) // Color.RGB4(0xFF0)
 
   def setComposite(name: String): Unit = {
     composite = Composite.parse(name)
@@ -438,7 +461,7 @@ class Visual[Ctx <: Graphics2D] private(
 
   private def sendOSC(m: osc.Message): Unit =
     try {
-      client ! m
+      if (client != null) client ! m
     } catch {
       case NonFatal(ex) =>
         ex.printStackTrace()
@@ -461,7 +484,10 @@ class Visual[Ctx <: Graphics2D] private(
     // repaint()   // requestAnimationFrame?
   }
 
-//  println(s"Visual it. 8. img1.width ${img1.width}, canvas.width ${canvas.width}")
+  private def sendSensors(): Unit =
+    sendOSC(osc.Message("/sense", sensorData: _*))
+
+  //  println(s"Visual it. 8. img1.width ${img1.width}, canvas.width ${canvas.width}")
 
   def repaint(): Unit =
     canvas.repaint(repaint) // dom.window.requestAnimationFrame(repaint)
@@ -472,6 +498,7 @@ class Visual[Ctx <: Graphics2D] private(
   def repaint(ctx: Ctx, animTime: Double): Unit = {
     paint(ctx, animTime)
     sendTrunkXY()
+    sendSensors()
     repaint()
   }
 
@@ -482,6 +509,7 @@ class Visual[Ctx <: Graphics2D] private(
     val animDt    = min(100.0, animTime - lastAnimTime)
     lastAnimTime  = animTime
     val wT        = animDt * speed // 0.01
+    val wS        = 1.0 - wT
     // println(s"wT $wT")
 
     val now = System.currentTimeMillis()
@@ -505,6 +533,9 @@ class Visual[Ctx <: Graphics2D] private(
           val dy        = automotiveDy // * wT
           trunkTgtX     = (trunkX + dx).clip(trunkMinX, trunkMaxX)
           trunkTgtY     = (trunkY + dy).clip(trunkMinY, trunkMaxY)
+          // mouse drift towards canvas center
+          if (mouseX != canvasWH) mouseX = mouseX * wS + canvasWH * wT
+          if (mouseY != canvasHH) mouseY = mouseY * wS + canvasHH * wT
         }
       }
 
@@ -518,7 +549,6 @@ class Visual[Ctx <: Graphics2D] private(
       }
     }
 
-    val wS        = 1.0 - wT
     val trunkX1   = (trunkX * wS + trunkTgtX * wT).clip(trunkMinX, trunkMaxX)
     val trunkY1   = (trunkY * wS + trunkTgtY * wT).clip(trunkMinY, trunkMaxY)
     val dx  = trunkX1 - trunkX
@@ -533,6 +563,18 @@ class Visual[Ctx <: Graphics2D] private(
       imgTrunk.draw(ctx, -tx, -ty)
     // }
 
+    // update sensors
+    if (mouseX >= 0) {
+      val mxAbs = mouseX + tx
+      val myAbs = mouseY + ty
+      for (si <- 0 until NumSensors) {
+        val hit   = sensorShapes(si).contains(mxAbs, myAbs)
+        val vOld  = sensorData(si)
+        val vNew  = if (hit) min(1.0f, vOld + sensorAtk * wT) else max(0.0f, vOld - sensorRls * wT)
+        sensorData(si) = vNew.toFloat
+      }
+    }
+
     if (DEBUG) {
       ctx.translate(-tx, -ty)
       ctx.fillStyle = polyColor1
@@ -541,7 +583,23 @@ class Visual[Ctx <: Graphics2D] private(
       }
       ctx.fillStyle = polyColor2
       ctx.fillShape(polyShape)
+
       ctx.translate(tx, ty)
+
+      ctx.fillStyle = mouseColor
+      if (mouseX >= 0 && mouseY >= 0) {
+        rTest1.setRect(mouseX - 8, mouseY - 2, 16, 4)
+        ctx.fillShape(rTest1)
+        rTest1.setRect(mouseX - 2, mouseY - 8, 4, 16)
+        ctx.fillShape(rTest1)
+      }
+
+      for (si <- sensorData.indices) {
+        val v = sensorData(si)
+        val h = v * 30
+        rTest1.setRect(si * 30 + 10, 40 - h, 20, h)
+        ctx.fillShape(rTest1)
+      }
     }
 
     var pi = 0

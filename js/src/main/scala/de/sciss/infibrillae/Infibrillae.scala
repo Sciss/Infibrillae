@@ -32,14 +32,11 @@ import scala.util.{Failure, Success}
 
 @JSExportTopLevel("Infibrillae")
 object Infibrillae {
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit =
     runGUI()
-  }
 
   type S = Durable
   type T = Durable.Txn
-
-  val SPACE_IDX = 0 // 2
 
   def runGUI(): Unit = {
     println("Infibrillae initialized.")
@@ -108,10 +105,6 @@ object Infibrillae {
   @JSExportTopLevel("sendOSC")
   def sendOSC(cmd: String, args: js.Any*): Unit =
     SServer.default.!(osc.Message(cmd, args: _*))
-
-  private val trunkIds = Seq(
-    11, 13, 15
-  )
 
   @JSExport
   def run(): Unit = {

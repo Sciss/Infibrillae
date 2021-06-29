@@ -14,55 +14,37 @@
 package de.sciss.infibrillae
 
 import de.sciss.file._
+import de.sciss.lucre.swing.View
 import de.sciss.lucre.synth.Executor
 import de.sciss.numbers.Implicits.doubleNumberWrapper
 import de.sciss.osc
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 
-import java.awt.image.BufferedImage
-import java.awt.{BorderLayout, Cursor, EventQueue, Point, Toolkit}
+import java.awt.{BorderLayout, Cursor, EventQueue}
 import java.net.InetSocketAddress
 import java.text.SimpleDateFormat
 import java.util.{Date, Locale}
 import javax.swing.{BorderFactory, JComponent, JFrame, JPanel, WindowConstants}
+import scala.concurrent.Future
 import scala.swing.event.ButtonClicked
 import scala.swing.{Dimension, FlowPanel, ToggleButton}
 import scala.util.{Failure, Success}
 
 object Infibrillae {
   def main(args: Array[String]): Unit = {
+    val noOSC = args.contains("--no-osc")
     Locale.setDefault(Locale.US)
-    runConnect()
+    runConnect(noOSC = noOSC)
   }
 
   type S = Durable
   type T = Durable.Txn
 
-//  val SPACE_IDX = 0 // 2
-
   private var universeOpt = Option.empty[Universe[T]]
 
   private var visualOpt = Option.empty[Visual[AWTGraphics2D]]
 
-//  case class Palabra(s: String, x: Double, y: Double)
-
-//  val palabras = Seq(
-//    Palabra("phantom limb", 104.0, 100.0),
-//    Palabra("fata morgana", 104.0, 100.0),
-//    Palabra("nystagmus"   , 120.0, 100.0),
-//  )
-
-//  val speeds = Seq(
-//    0.005,
-//    0.002,
-//    0.006,
-//  )
-
-  val trunkIds = Seq(
-    11, 13, 15
-  )
-
-  def runConnect(): Unit = {
+  def runConnect(noOSC: Boolean): Unit = {
     EventQueue.invokeLater { () =>
       println("Workspace loaded.")
       val canvas = new AWTCanvas
@@ -84,8 +66,11 @@ object Infibrillae {
 
       import Executor.executionContext
 
-      val t = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", 57120))
-      t.connect()
+      val t: osc.UDP.Transmitter.Directed = if (noOSC) null else {
+        val res = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", 57120))
+        res.connect()
+        res
+      }
       Visual(t /*server*/, canvas /*, idx = SPACE_IDX*/).onComplete {
         case Success(v) =>
           println("Visual ready.")
@@ -102,7 +87,7 @@ object Infibrillae {
     SoundProcesses.init()
     Widget        .init()
 
-    val fut = LoadWorkspace() // s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
+    val fut: Future[(Universe[T], View[T])] = LoadWorkspace() // s"assets/workspace-${trunkIds(SPACE_IDX)}.mllt.bin")
 
     import Executor.executionContext
 
