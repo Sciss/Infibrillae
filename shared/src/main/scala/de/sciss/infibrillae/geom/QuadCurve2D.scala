@@ -95,7 +95,7 @@ object QuadCurve2D {
       * @param y2    the Y coordinate of the end point
       * @since 1.2
       */
-    def this(x1: SFloat, y1: SFloat, ctrlx: SFloat, ctrly: SFloat, x2: SFloat, y2: SFloat) {
+    def this(x1: SFloat, y1: SFloat, ctrlx: SFloat, ctrly: SFloat, x2: SFloat, y2: SFloat) = {
       this()
       setCurve(x1, y1, ctrlx, ctrly, x2, y2)
     }
@@ -186,7 +186,7 @@ object QuadCurve2D {
       * @param y2    the Y coordinate of the end point
       * @since 1.2
       */
-    def this(x1: SDouble, y1: SDouble, ctrlx: SDouble, ctrly: SDouble, x2: SDouble, y2: SDouble) {
+    def this(x1: SDouble, y1: SDouble, ctrlx: SDouble, ctrly: SDouble, x2: SDouble, y2: SDouble) = {
       this()
       setCurve(x1, y1, ctrlx, ctrly, x2, y2)
     }

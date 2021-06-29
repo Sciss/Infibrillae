@@ -1,6 +1,6 @@
 import sbtcrossproject.Platform
 
-lazy val projectVersion = "0.2.0-SNAPSHOT"
+lazy val projectVersion = "0.3.0-SNAPSHOT"
 
 lazy val deps = new {
   val main = new {
@@ -9,12 +9,12 @@ lazy val deps = new {
 //    val fscape          = "3.6.0-SNAPSHOT"
     val jhlabs          = "2.0.235"
     val laminar         = "0.11.0" // "0.12.2"
-    val lucre           = "4.4.4"
+    val lucre           = "4.4.5"
     val lucreSwing      = "2.6.3"
 //    val plotly          = "0.8.1"
     val scalaCollider   = "2.6.4"
-    val scalaJavaTime   = "2.2.2"
-    val soundProcesses  = "4.7.5-SNAPSHOT"
+    val scalaJavaTime   = "2.3.0"
+    val soundProcesses  = "4.7.7"
   }
 }
 
@@ -29,7 +29,8 @@ lazy val root = crossProject(platforms: _*).in(file("."))
     homepage      := Some(url("https://www.sciss.de/exp/infibrillae/")),
     description   := "A sound piece for the web browser",
     version       := projectVersion,
-    scalaVersion  := "2.13.5",
+    scalaVersion  := "2.13.6",
+    scalacOptions ++= Seq("-deprecation"),
 //    resolvers += Resolver.bintrayRepo("cibotech", "public"),  // needed for EvilPlot
     libraryDependencies ++= Seq(
       "de.sciss"          %%% "audiofile"             % deps.main.audioFile,
@@ -55,7 +56,7 @@ lazy val root = crossProject(platforms: _*).in(file("."))
       "com.raquo"         %%% "laminar"               % deps.main.laminar,
       "io.github.cquiroz" %%% "scala-java-time"       % deps.main.scalaJavaTime,
     ),
-    artifactPath in(Compile, fastOptJS) := baseDirectory.value.getParentFile / "lib" / "main.js",
-    artifactPath in(Compile, fullOptJS) := baseDirectory.value.getParentFile / "lib" / "main.js",
+    Compile / fastOptJS / artifactPath := baseDirectory.value.getParentFile / "lib" / "main.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value.getParentFile / "lib" / "main.js",
   )
 

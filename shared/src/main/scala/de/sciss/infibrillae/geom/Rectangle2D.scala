@@ -199,7 +199,7 @@ object Rectangle2D {
       *          `Rectangle2D`
       * @since 1.2
       */
-    def this(x: SDouble, y: SDouble, w: SDouble, h: SDouble) {
+    def this(x: SDouble, y: SDouble, w: SDouble, h: SDouble) = {
       this()
       setRect(x, y, w, h)
     }

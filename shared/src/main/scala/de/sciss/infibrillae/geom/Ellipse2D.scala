@@ -81,7 +81,7 @@ object Ellipse2D {
       * @param h the height of the framing rectangle
       * @since 1.2
       */
-    def this(x: SFloat, y: SFloat, w: SFloat, h: SFloat) {
+    def this(x: SFloat, y: SFloat, w: SFloat, h: SFloat) = {
       this()
       setFrame(x, y, w, h)
     }
@@ -149,7 +149,7 @@ object Ellipse2D {
       * @param h the height of the framing rectangle
       * @since 1.2
       */
-    def this(x: SDouble, y: SDouble, w: SDouble, h: SDouble) {
+    def this(x: SDouble, y: SDouble, w: SDouble, h: SDouble) = {
       this()
       setFrame(x, y, w, h)
     }

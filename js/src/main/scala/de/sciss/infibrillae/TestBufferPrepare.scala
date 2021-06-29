@@ -140,14 +140,14 @@ object TestBufferPrepare {
       )
 
       val ggBoot = Button("Boot")
-      ggBoot.clicked ---> actBoot
+      ggBoot.clicked --> actBoot
       ggBoot.enabled = !booted
 
       def mkStartStop(r: Runner): (Widget, Widget) = {
         val ggStart = Button("Play")
         val ggStop  = Button("Stop")
-        ggStart .clicked ---> r.run
-        ggStop  .clicked ---> r.stop
+        ggStart .clicked --> r.run
+        ggStop  .clicked --> r.stop
         ggStart .enabled = booted && r.isIdle
         ggStop  .enabled = r.isBusy
         (ggStart, ggStop)

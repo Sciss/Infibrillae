@@ -1720,7 +1720,7 @@ abstract class Path2D private[geom]() extends Shape with Cloneable {
     *                     store the path segment types
     * @since 1.6
     */
-  def this(rule: Int, initialTypes: Int) {
+  def this(rule: Int, initialTypes: Int) = {
     this()
     setWindingRule(rule)
     this.pointTypes = new Array[Byte](initialTypes)

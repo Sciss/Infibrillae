@@ -702,7 +702,7 @@ class AffineTransform()
     */
   private var tpe = 0
 
-  def this(m00: Double, m10: Double, m01: Double, m11: Double, m02: Double, m12: Double, state: Int) {
+  def this(m00: Double, m10: Double, m01: Double, m11: Double, m02: Double, m12: Double, state: Int) = {
     this()
     this.m00 = m00
     this.m10 = m10
@@ -721,7 +721,7 @@ class AffineTransform()
     * @param Tx the `AffineTransform` object to copy
     * @since 1.2
     */
-  def this(Tx: AffineTransform) {
+  def this(Tx: AffineTransform) = {
     this()
     this.m00 = Tx.m00
     this.m10 = Tx.m10
@@ -746,7 +746,7 @@ class AffineTransform()
     * @param m12 the Y coordinate translation element of the 3x3 matrix
     * @since 1.2
     */
-  def this(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
+  def this(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) = {
     this()
     this.m00 = m00
     this.m10 = m10
@@ -771,7 +771,7 @@ class AffineTransform()
     *                   the array is greater than 6, the first 6 values are taken.
     * @since 1.2
     */
-  def this(flatmatrix: Array[Float]) {
+  def this(flatmatrix: Array[Float]) = {
     this()
     m00 = flatmatrix(0)
     m10 = flatmatrix(1)
@@ -797,7 +797,7 @@ class AffineTransform()
     * @param m12 the Y coordinate translation element of the 3x3 matrix
     * @since 1.2
     */
-  def this(m00: Double, m10: Double, m01: Double, m11: Double, m02: Double, m12: Double) {
+  def this(m00: Double, m10: Double, m01: Double, m11: Double, m02: Double, m12: Double) = {
     this()
     this.m00 = m00
     this.m10 = m10
@@ -822,7 +822,7 @@ class AffineTransform()
     *                   the array is greater than 6, the first 6 values are taken.
     * @since 1.2
     */
-  def this(flatmatrix: Array[Double]) {
+  def this(flatmatrix: Array[Double]) = {
     this()
     m00 = flatmatrix(0)
     m10 = flatmatrix(1)
