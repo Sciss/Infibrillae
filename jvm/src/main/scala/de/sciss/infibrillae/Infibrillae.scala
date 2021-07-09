@@ -19,7 +19,10 @@ import de.sciss.lucre.synth.Executor
 import de.sciss.numbers.Implicits.doubleNumberWrapper
 import de.sciss.osc
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
+import org.rogach.scallop.{ScallopConf, ScallopOption => Opt}
 
+import java.awt
+import java.awt.image.BufferedImage
 import java.awt.{BorderLayout, Cursor, EventQueue}
 import java.net.InetSocketAddress
 import java.text.SimpleDateFormat
@@ -31,10 +34,35 @@ import scala.swing.{Dimension, FlowPanel, ToggleButton}
 import scala.util.{Failure, Success}
 
 object Infibrillae {
+  case class Config(
+                   verbose    : Boolean = false,
+                   oscPort    : Int     = 57120,
+                   doubleSize : Boolean = false,
+                   )
+
   def main(args: Array[String]): Unit = {
-    val noOSC = args.contains("--no-osc")
     Locale.setDefault(Locale.US)
-    runConnect(noOSC = noOSC)
+    object p extends ScallopConf(args) {
+      private val default = Config()
+
+      val verbose: Opt[Boolean] = opt("verbose", short = 'V', default = Some(false),
+        descr = "Verbose printing."
+      )
+      val oscPort: Opt[Int] = opt("osc-port", default = Some(default.oscPort),
+        descr = s"OSC port of audio system, or 0 to disable (default: ${default.oscPort})."
+      )
+      val doubleSize: Opt[Boolean] = opt("double-size", default = Some(default.doubleSize),
+        descr = "Draw pixels at zoom level 200%"
+      )
+
+      verify()
+      val config: Config = Config(
+        verbose     = verbose(),
+        oscPort     = oscPort(),
+        doubleSize  = doubleSize(),
+      )
+    }
+    run(p.config)
   }
 
   type S = Durable
@@ -44,12 +72,16 @@ object Infibrillae {
 
   private var visualOpt = Option.empty[Visual[AWTGraphics2D]]
 
-  def runConnect(noOSC: Boolean): Unit = {
+  def run(c: Config): Unit = {
     EventQueue.invokeLater { () =>
       println("Workspace loaded.")
-      val canvas = new AWTCanvas
+      val canvas: AWTCanvas = if (!c.doubleSize) new AWTCanvas else new AWTCanvas {
+        override protected def drawContents(img: BufferedImage, target: awt.Graphics2D): Unit =
+          target.drawImage(img, 0, 0, 800, 800, null)
+      }
       val canvasPeer: JComponent = canvas.peer
-      canvasPeer.setPreferredSize(new Dimension(400, 400))
+      val extent = if (c.doubleSize) 800 else 400
+      canvasPeer.setPreferredSize(new Dimension(extent, extent))
       canvasPeer.setOpaque(true)
       canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
       val p  = new JPanel(new BorderLayout())
@@ -66,8 +98,8 @@ object Infibrillae {
 
       import Executor.executionContext
 
-      val t: osc.UDP.Transmitter.Directed = if (noOSC) null else {
-        val res = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", 57120))
+      val t: osc.UDP.Transmitter.Directed = if (c.oscPort <= 0) null else {
+        val res = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", c.oscPort))
         res.connect()
         res
       }
@@ -82,7 +114,7 @@ object Infibrillae {
     }
   }
 
-  def runBoot(): Unit = {
+  def runBoot(c: Config): Unit = {
 
     SoundProcesses.init()
     Widget        .init()
@@ -96,9 +128,13 @@ object Infibrillae {
         universeOpt = Some(universe)
         EventQueue.invokeLater { () =>
           println("Workspace loaded.")
-          val canvas = new AWTCanvas
+          val canvas: AWTCanvas = if (!c.doubleSize) new AWTCanvas else new AWTCanvas {
+            override protected def drawContents(img: BufferedImage, target: awt.Graphics2D): Unit =
+              target.drawImage(img, 0, 0, 800, 800, null)
+          }
           val canvasPeer: JComponent = canvas.peer
-          canvasPeer.setPreferredSize(new Dimension(400, 400))
+          val extent = if (c.doubleSize) 800 else 400
+          canvasPeer.setPreferredSize(new Dimension(extent, extent))
           canvasPeer.setOpaque(true)
 //          canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
 //          canvasPeer.setCursor(Toolkit.getDefaultToolkit.createCustomCursor(

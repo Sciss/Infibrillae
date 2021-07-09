@@ -430,7 +430,7 @@ class Visual[Ctx <: Graphics2D] private(
     }
   }
 
-  private final val DEBUG = true
+  private final val DEBUG = false
 //  private final val TEST  = true
 
   private val polyColor1: Color = Color.ARGB8(0x20FF0000)

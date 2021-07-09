@@ -14,6 +14,7 @@ lazy val deps = new {
 //    val plotly          = "0.8.1"
     val scalaCollider   = "2.6.4"
     val scalaJavaTime   = "2.3.0"
+    val scallop         = "4.0.3"
     val soundProcesses  = "4.7.7"
   }
 }
@@ -45,7 +46,8 @@ lazy val root = crossProject(platforms: _*).in(file("."))
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
-      "com.jhlabs" % "filters" % deps.main.jhlabs
+      "com.jhlabs" %  "filters" % deps.main.jhlabs,     // image composites
+      "org.rogach" %% "scallop" % deps.main.scallop,    // command line option parsing
     ),
   )
   .jsSettings(

@@ -79,9 +79,14 @@ class AWTCanvas extends Canvas[AWTGraphics2D] {
         f(g2w, dt)
         i += 1
       }
-      g.drawImage(buf, 0, 0, this)
+
+      // g.drawImage(buf, 0, 0, this)
+      drawContents(buf, g.asInstanceOf[java.awt.Graphics2D])
     }
   }
+
+  protected def drawContents(img: BufferedImage, target: java.awt.Graphics2D): Unit =
+    target.drawImage(img, 0, 0, null)
 
 //  private val g2  = _peer.getGraphics.asInstanceOf[java.awt.Graphics2D]
 //  private val g2w = new AWTGraphics2D(g2)
