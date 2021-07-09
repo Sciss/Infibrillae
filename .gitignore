@@ -10,3 +10,4 @@ lib/main*
 *.mllt/*.csv
 /*.bin
 assets/*.bin
+jvm/infibrillae.jar

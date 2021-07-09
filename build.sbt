@@ -1,5 +1,6 @@
 import sbtcrossproject.Platform
 
+lazy val baseNameL      = "infibrillae"
 lazy val projectVersion = "0.3.0-SNAPSHOT"
 
 lazy val deps = new {
@@ -50,6 +51,7 @@ lazy val root = crossProject(platforms: _*).in(file("."))
       "org.rogach" %% "scallop" % deps.main.scallop,    // command line option parsing
     ),
   )
+  .jvmSettings(assemblySettings)
   .jsSettings(
     // This is an application with a main method
     scalaJSUseMainModuleInitializer := true,
@@ -62,3 +64,22 @@ lazy val root = crossProject(platforms: _*).in(file("."))
     Compile / fullOptJS / artifactPath := baseDirectory.value.getParentFile / "lib" / "main.js",
   )
 
+lazy val appMainClass = Some("de.sciss.infibrillae.Infibrillae")
+
+lazy val assemblySettings = Seq(
+  // ---- assembly ----
+  assembly / test            := {},
+  assembly / mainClass       := appMainClass,
+  assembly / target          := baseDirectory.value,
+  assembly / assemblyJarName := s"$baseNameL.jar",
+  assembly / assemblyMergeStrategy := {
+    case "logback.xml" => MergeStrategy.last
+    case PathList("org", "xmlpull", _ @ _*)              => MergeStrategy.first
+    case PathList("org", "w3c", "dom", "events", _ @ _*) => MergeStrategy.first // bloody Apache Batik
+    case PathList(ps @ _*) if ps.last endsWith "module-info.class" => MergeStrategy.first // bloody Jackson
+    case x =>
+      val old = (assembly / assemblyMergeStrategy).value
+      old(x)
+  },
+  assembly / fullClasspath := (Test / fullClasspath).value // https://github.com/sbt/sbt-assembly/issues/27
+)
