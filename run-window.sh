@@ -6,5 +6,11 @@ sleep 4
 xset s off
 xset -dpms
 
-java -jar jvm/infibrillae.jar --osc-port 0 --double-size
+qjackctl &
+
+sleep 10
+
+java -jar jvm/infibrillae.jar &
+
+mellite-launcher --headless --boot-audio --auto-run start /home/pi/Documents/projects/infibrillae/workspace.mllt
 
