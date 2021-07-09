@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=in|fibrillae
+Type=Application
+GenericName=Work of Art
+Exec=lxterminal -e "/home/pi/Documents/devel/Infibrillae/run-window.sh"
+
