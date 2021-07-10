@@ -27,21 +27,26 @@ import java.awt.image.BufferedImage
 import java.awt.{BorderLayout, Cursor, EventQueue, GraphicsEnvironment, Toolkit}
 import java.net.InetSocketAddress
 import java.text.SimpleDateFormat
-import java.util.{Date, Locale}
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
+import java.util.{Date, Locale, Timer, TimerTask}
 import javax.swing.{AbstractAction, BorderFactory, JComponent, JFrame, JPanel, KeyStroke, SwingUtilities, WindowConstants}
 import scala.concurrent.Future
 import scala.swing.event.ButtonClicked
 import scala.swing.{Dimension, FlowPanel, ToggleButton}
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 object Infibrillae {
   case class Config(
-                   verbose    : Boolean = false,
-                   oscPort    : Int     = 57120,
-                   doubleSize : Boolean = false,
-                   fullScreen : Boolean = false,
-                   viewShiftX : Int     = 0,
-                   viewShiftY : Int     = 0,
+                   verbose      : Boolean = false,
+                   oscPort      : Int     = 57120,
+                   doubleSize   : Boolean = false,
+                   fullScreen   : Boolean = false,
+                   viewShiftX   : Int     = 0,
+                   viewShiftY   : Int     = 0,
+                   shutdownHour : Int     = 21,
+                   initDelay    : Int     = 120,
                    )
 
   def main(args: Array[String]): Unit = {
@@ -67,14 +72,24 @@ object Infibrillae {
       val viewShiftY: Opt[Int] = opt("view-shift-y", default = Some(default.viewShiftY),
         descr = s"Vertical image shift in pixels (default: ${default.viewShiftY})."
       )
+      val shutdownHour: Opt[Int] = opt("shutdown",
+        descr = s"Hour of Pi shutdown (or 0 to avoid shutdown) (default: ${default.shutdownHour})",
+        default = Some(default.shutdownHour),
+        validate = x => x >= 0 && x <= 24
+      )
+      val initDelay: Opt[Int] = opt("init-delay", default = Some(default.initDelay),
+        descr = s"Initial delay in seconds (to make sure date-time is synced) (default: ${default.initDelay})."
+      )
       verify()
       val config: Config = Config(
-        verbose     = verbose(),
-        oscPort     = oscPort(),
-        doubleSize  = doubleSize(),
-        fullScreen  = fullScreen(),
-        viewShiftX  = viewShiftX(),
-        viewShiftY  = viewShiftY(),
+        verbose       = verbose(),
+        oscPort       = oscPort(),
+        doubleSize    = doubleSize(),
+        fullScreen    = fullScreen(),
+        viewShiftX    = viewShiftX(),
+        viewShiftY    = viewShiftY(),
+        shutdownHour  = shutdownHour(),
+        initDelay     = initDelay(),
       )
     }
     run(p.config)
@@ -87,71 +102,128 @@ object Infibrillae {
 
   private var visualOpt = Option.empty[Visual[AWTGraphics2D]]
 
+  final def name          : String = "in|fibrillae (window)"
+  final def nameAndVersion: String = s"$name $fullVersion"
+
+  private def buildInfString(key: String): String = try {
+    val clazz = Class.forName("de.sciss.kontakt.BuildInfo")
+    val m     = clazz.getMethod(key)
+    m.invoke(null).toString
+  } catch {
+    case NonFatal(_) => "?"
+  }
+
+  final def version       : String = buildInfString("version")
+  final def builtAt       : String = buildInfString("builtAtString")
+  final def fullVersion   : String = s"v$version, built $builtAt"
+
+  private def mkView(c: Config): Unit = {
+    println("Workspace loaded.")
+    val canvas: AWTCanvas = if (!c.doubleSize) new AWTCanvas else new AWTCanvas {
+      override protected def drawContents(img: BufferedImage, target: awt.Graphics2D): Unit =
+        target.drawImage(img, 0, 0, 800, 800, null)
+    }
+    val canvasPeer: JComponent = canvas.peer
+    val extent  = if (c.doubleSize) 800 else 400
+    val dim     = new Dimension(extent, extent)
+    canvasPeer.setPreferredSize (dim)
+    canvasPeer.setMaximumSize   (dim)
+    canvasPeer.setOpaque(true)
+    canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
+    val p  = new JPanel(new BorderLayout())
+    val sd = GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
+    val gc = sd.getDefaultConfiguration
+    val border = if (c.fullScreen) {
+      val sb = gc.getBounds
+      val spaceH    = sb.width - extent
+      val padLeft   = (spaceH / 2 + c.viewShiftX).clip(0, spaceH)
+      val padRight  = spaceH - padLeft
+      val spaceV    = sb.height - extent
+      val padTop    = (spaceV / 2 + c.viewShiftY).clip(0, spaceV)
+      val padBottom = spaceV - padTop
+      BorderFactory.createMatteBorder(padTop, padLeft, padBottom, padRight, java.awt.Color.BLACK)
+    } else {
+      BorderFactory.createEmptyBorder(40, 40, 40, 40)
+    }
+    p.setBorder(border)
+    p.add(canvasPeer, BorderLayout.CENTER )
+
+    val fr = new JFrame(gc)
+    if (c.fullScreen) {
+      fr.setUndecorated(true)
+    } else {
+      fr.setTitle("in|fibrillae")
+    }
+
+    fr.setContentPane(p)
+    fr.pack()
+    if (!c.fullScreen) fr.setLocationRelativeTo(null)
+    fr.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+    fr.setVisible(true)
+
+    if (c.fullScreen) toggleFullScreen(fr)
+
+    // XXX TODO: doesn't work:
+    //    installFullScreenKey(fr, canvasPeer)
+
+    import Executor.executionContext
+
+    val t: osc.UDP.Transmitter.Directed = if (c.oscPort <= 0) null else {
+      val res = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", c.oscPort))
+      res.connect()
+      res
+    }
+    Visual(t /*server*/, canvas /*, idx = SPACE_IDX*/).onComplete {
+      case Success(v) =>
+        println("Visual ready.")
+        visualOpt = Some(v)
+
+      case Failure(ex) =>
+        ex.printStackTrace()
+    }
+  }
+
+  def shutdown(): Unit = {
+    import sys.process._
+    Seq("sudo", "shutdown", "now").!
+  }
+
+  private def log(what: => String): Unit = println(what)
+
   def run(c: Config): Unit = {
-    EventQueue.invokeLater { () =>
-      println("Workspace loaded.")
-      val canvas: AWTCanvas = if (!c.doubleSize) new AWTCanvas else new AWTCanvas {
-        override protected def drawContents(img: BufferedImage, target: awt.Graphics2D): Unit =
-          target.drawImage(img, 0, 0, 800, 800, null)
+    println(nameAndVersion)
+
+    val initDelayMS = math.max(0, c.initDelay) * 1000L
+    if (initDelayMS > 0) {
+      println(s"Waiting for ${c.initDelay} seconds.")
+      Thread.sleep(initDelayMS)
+    }
+
+    val odt       = OffsetDateTime.now()
+    val date      = Date.from(odt.toInstant)
+    println(s"The date and time: $date")
+
+    EventQueue.invokeLater(() => mkView(c))
+
+    lazy val timer = new Timer
+
+    if (c.shutdownHour > 0) {
+      val odtSD0  = odt.withHour(c.shutdownHour % 24).truncatedTo(ChronoUnit.HOURS)
+      val odtSD   = if (odtSD0.isAfter(odt)) odtSD0 else {
+        println("WARNING: Shutdown hour lies on next day. Shutting down in two hours instead!")
+        odt.plus(2, ChronoUnit.HOURS)
       }
-      val canvasPeer: JComponent = canvas.peer
-      val extent  = if (c.doubleSize) 800 else 400
-      val dim     = new Dimension(extent, extent)
-      canvasPeer.setPreferredSize (dim)
-      canvasPeer.setMaximumSize   (dim)
-      canvasPeer.setOpaque(true)
-      canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
-      val p  = new JPanel(new BorderLayout())
-      val sd = GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
-      val gc = sd.getDefaultConfiguration
-      val border = if (c.fullScreen) {
-        val sb = gc.getBounds
-        val spaceH    = sb.width - extent
-        val padLeft   = (spaceH / 2 + c.viewShiftX).clip(0, spaceH)
-        val padRight  = spaceH - padLeft
-        val spaceV    = sb.height - extent
-        val padTop    = (spaceV / 2 + c.viewShiftY).clip(0, spaceV)
-        val padBottom = spaceV - padTop
-        BorderFactory.createMatteBorder(padTop, padLeft, padBottom, padRight, java.awt.Color.BLACK)
-      } else {
-        BorderFactory.createEmptyBorder(40, 40, 40, 40)
-      }
-      p.setBorder(border)
-      p.add(canvasPeer, BorderLayout.CENTER )
-
-      val fr = new JFrame(gc)
-      if (c.fullScreen) {
-        fr.setUndecorated(true)
-      } else {
-        fr.setTitle("in|fibrillae")
-      }
-
-      fr.setContentPane(p)
-      fr.pack()
-      if (!c.fullScreen) fr.setLocationRelativeTo(null)
-      fr.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-      fr.setVisible(true)
-
-      if (c.fullScreen) toggleFullScreen(fr)
-
-      // XXX TODO: doesn't work:
-      //    installFullScreenKey(fr, canvasPeer)
-
-      import Executor.executionContext
-
-      val t: osc.UDP.Transmitter.Directed = if (c.oscPort <= 0) null else {
-        val res = osc.UDP.Transmitter(new InetSocketAddress("127.0.0.1", c.oscPort))
-        res.connect()
-        res
-      }
-      Visual(t /*server*/, canvas /*, idx = SPACE_IDX*/).onComplete {
-        case Success(v) =>
-          println("Visual ready.")
-          visualOpt = Some(v)
-
-        case Failure(ex) =>
-          ex.printStackTrace()
-      }
+      val dateSD  = Date.from(odtSD.toInstant)
+      timer.schedule(new TimerTask {
+        override def run(): Unit = {
+          log("About to shut down...")
+          Thread.sleep(8000)
+          // writeLock.synchronized {
+            shutdown()
+          // }
+        }
+      }, dateSD)
+      log(s"Shutdown scheduled for $dateSD")
     }
   }
 

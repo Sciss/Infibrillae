@@ -19,4 +19,4 @@ mellite-launcher --headless --boot-audio --auto-run start /home/pi/Documents/pro
 
 sleep 30
 echo "- start visual"
-java -jar jvm/infibrillae.jar
+java -jar jvm/infibrillae.jar --full-screen

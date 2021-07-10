@@ -22,8 +22,18 @@ lazy val deps = new {
 
 lazy val platforms = Seq[Platform](JVMPlatform, JSPlatform)
 
+lazy val buildInfoSettings = Seq(
+  // ---- build info ----
+  buildInfoKeys := Seq(name, organization, version, scalaVersion, description,
+    BuildInfoKey.map(homepage) { case (k, opt)           => k -> opt.get },
+    BuildInfoKey.map(licenses) { case (_, Seq((lic, _))) => "license" -> lic }
+  ),
+  buildInfoOptions += BuildInfoOption.BuildTime
+)
+
 lazy val root = crossProject(platforms: _*).in(file("."))
-//  .enablePlugins(ScalaJSPlugin)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(buildInfoSettings)
   .settings(
     name          := "in|fibrillae",
     organization  := "de.sciss",
