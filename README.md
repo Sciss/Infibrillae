@@ -39,6 +39,10 @@ You must run a web server, such as
 
 (then open its default page, like [127.0.0.1:8000](http://127.0.0.1:8000))
 
+## physical window installation
+
+Build with `sbt rootJVM/assembly`. See `run-window.sh` for the start script.
+
 ## Navigation
 
 Moving the mouse over the canvas traverses the virtual spaces. The words of the poems appear and disappear

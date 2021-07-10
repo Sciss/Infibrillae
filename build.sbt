@@ -54,6 +54,7 @@ lazy val root = crossProject(platforms: _*).in(file("."))
       "de.sciss"          %%% "soundprocesses-core"   % deps.main.soundProcesses,
       "de.sciss"          %%% "soundprocesses-views"  % deps.main.soundProcesses,
     ),
+    buildInfoPackage := "de.sciss.infibrillae",
   )
   .jvmSettings(
     libraryDependencies ++= Seq(

@@ -106,7 +106,7 @@ object Infibrillae {
   final def nameAndVersion: String = s"$name $fullVersion"
 
   private def buildInfString(key: String): String = try {
-    val clazz = Class.forName("de.sciss.kontakt.BuildInfo")
+    val clazz = Class.forName("de.sciss.infibrillae.BuildInfo")
     val m     = clazz.getMethod(key)
     m.invoke(null).toString
   } catch {
