@@ -16,18 +16,19 @@ package de.sciss.infibrillae
 import de.sciss.file._
 import de.sciss.lucre.swing.View
 import de.sciss.lucre.synth.Executor
-import de.sciss.numbers.Implicits.doubleNumberWrapper
+import de.sciss.numbers.Implicits._
 import de.sciss.osc
 import de.sciss.proc.{AuralSystem, Durable, LoadWorkspace, SoundProcesses, Universe, Widget}
 import org.rogach.scallop.{ScallopConf, ScallopOption => Opt}
 
 import java.awt
+import java.awt.event.{ActionEvent, InputEvent, KeyEvent}
 import java.awt.image.BufferedImage
-import java.awt.{BorderLayout, Cursor, EventQueue}
+import java.awt.{BorderLayout, Cursor, EventQueue, GraphicsEnvironment, Toolkit}
 import java.net.InetSocketAddress
 import java.text.SimpleDateFormat
 import java.util.{Date, Locale}
-import javax.swing.{BorderFactory, JComponent, JFrame, JPanel, WindowConstants}
+import javax.swing.{AbstractAction, BorderFactory, JComponent, JFrame, JPanel, KeyStroke, SwingUtilities, WindowConstants}
 import scala.concurrent.Future
 import scala.swing.event.ButtonClicked
 import scala.swing.{Dimension, FlowPanel, ToggleButton}
@@ -38,6 +39,9 @@ object Infibrillae {
                    verbose    : Boolean = false,
                    oscPort    : Int     = 57120,
                    doubleSize : Boolean = false,
+                   fullScreen : Boolean = false,
+                   viewShiftX : Int     = 0,
+                   viewShiftY : Int     = 0,
                    )
 
   def main(args: Array[String]): Unit = {
@@ -54,12 +58,23 @@ object Infibrillae {
       val doubleSize: Opt[Boolean] = opt("double-size", default = Some(default.doubleSize),
         descr = "Draw pixels at zoom level 200%"
       )
-
+      val fullScreen: Opt[Boolean] = opt("full-screen", default = Some(default.fullScreen),
+        descr = "Make the window full-screen"
+      )
+      val viewShiftX: Opt[Int] = opt("view-shift-x", default = Some(default.viewShiftX),
+        descr = s"Horizontal image shift in pixels (default: ${default.viewShiftX})."
+      )
+      val viewShiftY: Opt[Int] = opt("view-shift-y", default = Some(default.viewShiftY),
+        descr = s"Vertical image shift in pixels (default: ${default.viewShiftY})."
+      )
       verify()
       val config: Config = Config(
         verbose     = verbose(),
         oscPort     = oscPort(),
         doubleSize  = doubleSize(),
+        fullScreen  = fullScreen(),
+        viewShiftX  = viewShiftX(),
+        viewShiftY  = viewShiftY(),
       )
     }
     run(p.config)
@@ -80,21 +95,47 @@ object Infibrillae {
           target.drawImage(img, 0, 0, 800, 800, null)
       }
       val canvasPeer: JComponent = canvas.peer
-      val extent = if (c.doubleSize) 800 else 400
-      canvasPeer.setPreferredSize(new Dimension(extent, extent))
+      val extent  = if (c.doubleSize) 800 else 400
+      val dim     = new Dimension(extent, extent)
+      canvasPeer.setPreferredSize (dim)
+      canvasPeer.setMaximumSize   (dim)
       canvasPeer.setOpaque(true)
       canvasPeer.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR))
       val p  = new JPanel(new BorderLayout())
-      val p1 = new JPanel(new BorderLayout())
-      p1.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40))
-      p1.add(canvasPeer         , BorderLayout.CENTER )
-      p .add(p1                 , BorderLayout.CENTER )
-      val fr = new JFrame("in|fibrillae")
+      val sd = GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
+      val gc = sd.getDefaultConfiguration
+      val border = if (c.fullScreen) {
+        val sb = gc.getBounds
+        val spaceH    = sb.width - extent
+        val padLeft   = (spaceH / 2 + c.viewShiftX).clip(0, spaceH)
+        val padRight  = spaceH - padLeft
+        val spaceV    = sb.height - extent
+        val padTop    = (spaceV / 2 + c.viewShiftY).clip(0, spaceV)
+        val padBottom = spaceV - padTop
+        BorderFactory.createMatteBorder(padTop, padLeft, padBottom, padRight, java.awt.Color.BLACK)
+      } else {
+        BorderFactory.createEmptyBorder(40, 40, 40, 40)
+      }
+      p.setBorder(border)
+      p.add(canvasPeer, BorderLayout.CENTER )
+
+      val fr = new JFrame(gc)
+      if (c.fullScreen) {
+        fr.setUndecorated(true)
+      } else {
+        fr.setTitle("in|fibrillae")
+      }
+
       fr.setContentPane(p)
       fr.pack()
-      fr.setLocationRelativeTo(null)
+      if (!c.fullScreen) fr.setLocationRelativeTo(null)
       fr.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
       fr.setVisible(true)
+
+      if (c.fullScreen) toggleFullScreen(fr)
+
+      // XXX TODO: doesn't work:
+      //    installFullScreenKey(fr, canvasPeer)
 
       import Executor.executionContext
 
@@ -112,6 +153,27 @@ object Infibrillae {
           ex.printStackTrace()
       }
     }
+  }
+
+  def toggleFullScreen(frame: javax.swing.JFrame): Unit = {
+    val gc = frame /*.peer*/.getGraphicsConfiguration
+    val sd = gc.getDevice
+    val w  = SwingUtilities.getWindowAncestor(frame /*.peer*/.getRootPane)
+    sd.setFullScreenWindow(if (sd.getFullScreenWindow == w) null else w)
+  }
+
+  def installFullScreenKey(frame: javax.swing.JFrame, display: javax.swing.JComponent): Unit = {
+    val iMap    = display/*.peer*/.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+    val aMap    = display/*.peer*/.getActionMap
+    val fsName  = "fullscreen"
+    iMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit.getMenuShortcutKeyMask |
+      InputEvent.SHIFT_MASK), fsName)
+    aMap.put(fsName, new AbstractAction(fsName) {
+      def actionPerformed(e: ActionEvent): Unit = {
+        println("toggleFullScreen")
+        toggleFullScreen(frame)
+      }
+    })
   }
 
   def runBoot(c: Config): Unit = {
