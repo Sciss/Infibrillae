@@ -10,6 +10,9 @@ sleep 4
 xset s off
 xset -dpms
 
+echo "- wait two minutes for clock sync"
+sleep 120
+
 echo "- start qjackctl"
 qjackctl &
 
@@ -19,4 +22,4 @@ mellite-launcher --headless --boot-audio --auto-run start /home/pi/Documents/pro
 
 sleep 30
 echo "- start visual"
-java -jar jvm/infibrillae.jar --full-screen
+java -jar jvm/infibrillae.jar --full-screen --init-delay 0
