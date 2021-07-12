@@ -16,7 +16,7 @@ lazy val deps = new {
     val scalaCollider   = "2.6.4"
     val scalaJavaTime   = "2.3.0"
     val scallop         = "4.0.3"
-    val soundProcesses  = "4.7.7"
+    val soundProcesses  = "4.8.0"
   }
 }
 

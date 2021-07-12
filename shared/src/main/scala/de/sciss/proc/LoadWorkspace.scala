@@ -23,7 +23,7 @@ object LoadWorkspace extends LoadWorkspacePlatform {
   type S = Durable
   type T = Durable.Txn
 
-  def fromBlob(ws: Blob): (Universe[T], View[T]) = {
+  def fromBlob(ws: Blob, elem: String = "start-web"): (Universe[T], View[T]) = {
     println("Workspace meta data:")
     ws.meta.foreach(println)
     implicit val cursor: Cursor[T] = ws.cursor
@@ -33,7 +33,7 @@ object LoadWorkspace extends LoadWorkspacePlatform {
       //              fRoot.iterator.foreach { child =>
       //                println(s"CHILD: ${child.name}")
       //              }
-      fRoot.$[Widget]("start").map { w =>
+      fRoot.$[Widget](elem).map { w =>
         implicit val u: Universe[T] = Universe.dummy[T]
         val wH = tx.newHandle(w)
         implicit val ctx: expr.Context[T] = ExprContext(selfH = Some(wH))
@@ -43,6 +43,6 @@ object LoadWorkspace extends LoadWorkspacePlatform {
         (u, _view)
       }
     }
-    resOpt.getOrElse(sys.error("No start element found"))
+    resOpt.getOrElse(sys.error(s"No element '$elem' found"))
   }
 }
