@@ -33,11 +33,14 @@ Open `workspace.mllt` and choose the menu item _File_ > _Export Binary Workspace
 Then compile the launcher with `sbt -J-Xmx2G fullOptJS`.
 
 After successful compilation, the [index.html](index.html) can be used to run the application.
-You must run a web server, such as
+You must run a web server. It must correctly set the headers with `Cross-Origin-Opener-Policy: same-origin`
+and `Cross-Origin-Embedder-Policy: require-corp` in order to work with Firefox. Thanks to
+[this blog](https://github.com/cggallant/blog_post_code/tree/master/2020%20-%20July%20-%20Extending%20Python%E2%80%99s%20Simple%20HTTP%20Server),
+a script is already included that works with Python 2;
 
-    python -m SimpleHTTPServer
+    python wasm-server.py
 
-(then open its default page, like [127.0.0.1:8000](http://127.0.0.1:8000))
+(then open its default page, [127.0.0.1:8080](http://127.0.0.1:8080))
 
 ## physical window installation
 
