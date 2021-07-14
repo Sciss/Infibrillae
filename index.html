@@ -8,13 +8,15 @@
     <title>in|fibrillae</title>
     <link href="assets/lucre-swing.css" rel="stylesheet">
     <script type="text/javascript" src="lib/main.js"></script>
-    <style>
+</head>
+<style>
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
       div.emscripten { text-align: center; }
       div.emscripten_border { border: 1px solid black; }
 
       body {
         margin: 10%;
+        font-size: 13px;
       }
 
       h1 {
@@ -23,18 +25,16 @@
       }
 
       h2 {
+        font-family: 'Voltaire';
         font-size: 18px;
+      }
+
+      p {
+        font-size: 13px;
       }
 
       a.infib-ext:before {
         content: "⛶\0000a0";
-      }
-
-      #boot {
-        float: left;
-        font-size: 12px;
-        margin-left: 4px;
-        margin-bottom: 4px;
       }
 
       #status {
@@ -46,64 +46,51 @@
         color: rgb(120, 120, 120);
       }
 
-      #controls {
-        vertical-align: top;
-        margin-top: 16px;
-        margin-right: 16px;
-      }
-
-      #output {
-        width: 100%;
-        height: 120px;
-        margin-top: 10px;
-        margin-bottom: 10px;
-        border-left: 0px;
-        border-right: 0px;
-        padding-left: 0px;
-        padding-right: 0px;
-        display: block;
-        font-family: 'Lucida Console', Monaco, monospace;
-        font-size: 11px;
-        outline: none;
-      }
-
       @font-face {
         font-family: 'Voltaire';
         src: url('assets/Voltaire-Regular.ttf');
       }
 
       #canvas {
-        outline:none;  // cf. https://stackoverflow.com/questions/3015523/remove-or-disable-focus-border-of-browser-via-javascript
+        outline: none;  // cf. https://stackoverflow.com/questions/3015523/remove-or-disable-focus-border-of-browser-via-javascript
       }
 
       #piece {
         margin-top: 1em;
+        margin-bottom: 48px;
+        min-height: 40px;
       }
 
       #visual {
         max-width: 400px;
         cursor: crosshair;
       }
+
+      #header {
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      #descr {
+        display: none;
+      }
+
+      .center-screen {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+}
     </style>
-</head>
 <body>
-<!--<button onclick="Infibrillae.run();">Click to Start</button>-->
+<div id="header" >
 <h1>in|fibrillae</h1>
 <h2>A sound piece for the web browser</h2>
-<p>Hanns Holger Rutz &amp; Nayar&iacute; Castillo, 2021</p>
-<!--
+<p>Hanns Holger Rutz &amp; Nayar&iacute; Castillo, 2021. <input type='button' id='show-descr' value='details'></p>
+    <div id="descr">
 <p>
-    This page shows a <strong>work in progress</strong>. <em>in|fibrillae</em> is based on the
-    physical multi-channel installation <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/711665" target="_blank">in|filtration</a>.
-</p><p>
-    For project context, please see <a class="infib-ext" href="https://diode.zone/videos/watch/6a6491f5-1ce1-4a54-bbfa-e419d1878858?subtitle=en" target="_blank">this video statement</a>.
-</p>
--->
-<!--
-<iframe width="560" height="315" sandbox="allow-same-origin allow-scripts allow-popups" src="https://diode.zone/videos/embed/6a6491f5-1ce1-4a54-bbfa-e419d1878858?subtitle=en" frameborder="0" allowfullscreen></iframe><p>
--->
-<p>
-    For more information<!-- on <em>in|fibrillae</em>-->, please
+    For more information, please
     see <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/1111185" target="_blank">project documentation</a>.
     Minimum browser requirement: Firefox&nbsp;79, Chrome/Chromium&nbsp;68. Firefox 88 or newer recommended. Mobile phones currently not supported.
 </p><p>
@@ -123,16 +110,14 @@
     Please refer to the
     <a class="infib-ext" href="https://github.com/Sciss/Infibrillae" target="_blank">source repository</a>.
 </p>
-<!-- cf. https://stackoverflow.com/questions/12886286/addeventlistener-for-keydown-on-canvas -->
-<div id="visual"><canvas id="canvas" width="400" height="400" tabindex='1'></canvas></div>
-<div id="piece"></div>
-<!--
-<div id='controls'>
-    <input type="button" id="boot" disabled="disabled" value="Boot scsynth" onclick="boot();">
+    </div>
 </div>
--->
+<!-- cf. https://stackoverflow.com/questions/12886286/addeventlistener-for-keydown-on-canvas -->
+<div class="center-screen">
+    <div id="piece"><p>Loading...</p></div>
+    <div id="visual"><canvas id="canvas" width="400" height="400" tabindex='1'></canvas></div>
+</div>
 <span class="emscripten" id="status"></span>
-<textarea id="output" rows="8"></textarea>
 
 <script type='text/javascript'>
   var statusElement   = document.getElementById('status');
@@ -142,20 +127,9 @@
     preRun: [],
     postRun: [],
     print: (function() {
-      var element = document.getElementById('output');
-      if (element) element.value = ''; // clear browser cache
       return function(text) {
         if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-        // These replacements are necessary if you render to raw HTML
-        //text = text.replace(/&/g, "&amp;");
-        //text = text.replace(/</g, "&lt;");
-        //text = text.replace(/>/g, "&gt;");
-        //text = text.replace('\n', '<br>', 'g');
         console.log(text);
-        if (!text.startsWith("late ") && element) {
-          element.value += text + "\n";
-          element.scrollTop = element.scrollHeight; // focus on bottom
-        }
         if (!hasCrashed && text.startsWith("*** ERROR: SynthDef ")) {
           hasCrashed = true;
           alert("Sorry!\nIt seems SuperCollider has crashed.\nPlease reload the page and start over.");
@@ -194,6 +168,19 @@
     Module.setStatus = function(text) {
       if (text) Module.printErr('[post-exception status] ' + text);
     };
+  };
+
+  var ggInfo = document.getElementById('show-descr'); // Assumes element with id='button'
+
+  ggInfo.onclick = function() {
+    var div = document.getElementById('descr');
+    if (div.style.display === 'block') {
+      div.style.display = 'none';
+      ggInfo.value = 'details';
+    } else {
+      div.style.display = 'block';
+      ggInfo.value = 'hide';
+    }
   };
 
   if (window.SharedArrayBuffer === undefined) {

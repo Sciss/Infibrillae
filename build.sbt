@@ -13,6 +13,7 @@ lazy val deps = new {
     val lucre           = "4.4.5"
     val lucreSwing      = "2.6.3"
 //    val plotly          = "0.8.1"
+    val pi4j            = "1.4"
     val scalaCollider   = "2.6.4"
     val scalaJavaTime   = "2.3.0"
     val scallop         = "4.0.3"
@@ -58,8 +59,9 @@ lazy val root = crossProject(platforms: _*).in(file("."))
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
-      "com.jhlabs" %  "filters" % deps.main.jhlabs,     // image composites
-      "org.rogach" %% "scallop" % deps.main.scallop,    // command line option parsing
+      "com.jhlabs" %  "filters"   % deps.main.jhlabs,     // image composites
+      "org.rogach" %% "scallop"   % deps.main.scallop,    // command line option parsing
+      "com.pi4j"   %  "pi4j-core" % deps.main.pi4j,       // GPIO control
     ),
   )
   .jvmSettings(assemblySettings)

@@ -135,6 +135,7 @@ object Infibrillae {
     fut.onComplete {
       case Success((universe: Universe[T], view)) =>
         universeOpt = Some(universe)
+        container.removeChild(container.firstChild)
         /*val root: RootNode =*/ render(container, view.component)
         val canvasPeer  = dom.document.getElementById("canvas").asInstanceOf[html.Canvas]
         val canvas      = new WebCanvas(canvasPeer)
