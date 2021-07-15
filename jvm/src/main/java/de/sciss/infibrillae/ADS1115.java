@@ -35,8 +35,11 @@ public class ADS1115
         // bits 1-0: Comparator queue and disable. 00 = Assert after one conversion, 01 = Assert after two conversions,
         //    10 = Assert after four conversions, 11 = Disable comparator (default)
 
-        // AINP = AIN0 and AINN = AIN1, +/- 2.048V, Continuous conversion mode, 128 SPS
-        byte[] config = { (byte) 0x84, (byte) 0x83 };
+        // AINP = AIN0 and AINN = AIN1, +/- 2.048V, Continuous conversion mode, 128 Hz
+//        byte[] config = { (byte) 0b1_000_010_0, (byte) 0b100_00011 };
+        // +/- 1.024V, Continuous conversion mode, 8 Hz
+        byte[] config = { (byte) 0b1_000_011_0, (byte) 0b000_00011 };
+
         // Select configuration register
         device.write(0x01, config, 0, 2);
         Thread.sleep(500);
@@ -53,6 +56,7 @@ public class ADS1115
             {
                 raw_adc -= 65535;
             }
+            raw_adc += 32768;
 
             // Output data to screen
             System.out.printf("AIN0: %d \n", raw_adc);
