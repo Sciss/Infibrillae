@@ -72,7 +72,8 @@ object SensorTest {
     Swing.onEDT {
       val gg = pins.map { pin =>
         val b = new Button(pin.getName)
-        b.foreground = java.awt.Color.white
+        b.focusable   = false
+        b.foreground  = java.awt.Color.white
         val _in = instance.provisionDigitalInputPin(provider, pin) // , resistance)
 //        if (deb0 >= 0) _in.setDebounce(deb0)
         def setState(state: Boolean): Unit =
