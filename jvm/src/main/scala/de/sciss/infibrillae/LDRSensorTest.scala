@@ -14,7 +14,8 @@ object LDRSensorTest {
 
   case class Config(
                      maxDiff: Int = 2000,
-                     period  : Int = 250,
+                     period : Int = 250,
+                     thresh : Int = 300,
                    )
 
   def main(args: Array[String]): Unit = { // Create I2C bus
@@ -30,10 +31,15 @@ object LDRSensorTest {
         descr = s"Period between samples in milliseconds (default: ${default.period}).",
         validate = x => x > 0
       )
+      val thresh: Opt[Int] = opt("thresh", default = Some(default.thresh),
+        descr = s"Threshold for activation (default: ${default.thresh}).",
+        validate = x => x > 0
+      )
       verify()
       val config: Config = Config(
         maxDiff = maxDiff(),
         period  = period(),
+        thresh  = thresh(),
       )
     }
     run(p.config)
@@ -67,19 +73,23 @@ object LDRSensorTest {
     Thread.sleep(500)
 
     val HIST_SIZE = 128
+    var HIST_IDX  = 0
     val history = new Array[Int](HIST_SIZE)
 
     object view extends Component {
       private val scaleX  = 4
+      private val width   = HIST_SIZE * scaleX
       private val height  = 480
-      preferredSize = new Dimension(HIST_SIZE * scaleX, height)
+      preferredSize = new Dimension(width, height)
       opaque = true
 
       override protected def paintComponent(g: swing.Graphics2D): Unit = {
         super.paintComponent(g)
         g.setColor(java.awt.Color.black)
         g.fillRect(0, 0, peer.getWidth, peer.getHeight)
-        g.setColor(java.awt.Color.white)
+        g.setColor(java.awt.Color.red)
+        val dyT = c.thresh.linLin(0, c.maxDiff.toFloat, 0, height.toFloat).toInt.clip(0, height)
+        g.fillRect(0, height - dyT - 2, width, 4)
         var i = 1
         var x1    = history(0)
         var dif   = 0
@@ -89,6 +99,8 @@ object LDRSensorTest {
           dif     = Math.abs(x0 - x1)
           x1      = x0
           val dy  = dif.linLin(0, c.maxDiff.toFloat, 0, height.toFloat).toInt.clip(0, height)
+          val colr = if (dif > c.thresh) java.awt.Color.red else java.awt.Color.white
+          g.setColor(colr)
           g.fillRect(x, height - dy, scaleX - 1, dy)
           x += scaleX
           i += 1
@@ -106,7 +118,6 @@ object LDRSensorTest {
     }
 
     val data = new Array[Byte](2)
-    var HIST_IDX = 0
     while (true) {
       // Read 2 bytes of data
       // raw_adc msb, raw_adc lsb
