@@ -9,7 +9,9 @@ import java.util.Locale
 import scala.annotation.switch
 import scala.swing.{BoxPanel, Button, MainFrame, Orientation, Swing}
 
-object SensorTest {
+// attempt with the passive infrared sensors
+// (result: they don't work through the glass window)
+object PIRSensorTest {
   case class Config(
                    pins: List[Int] = List(0, 1)
                    )
