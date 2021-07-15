@@ -1,3 +1,16 @@
+/*
+ *  LDRSensor.scala
+ *  (in|fibrillae)
+ *
+ *  Copyright (c) 2020-2021 Hanns Holger Rutz. All rights reserved.
+ *
+ *  This software is published under the GNU Affero General Public License v3+
+ *
+ *
+ *  For further information, please contact Hanns Holger Rutz at
+ *  contact@sciss.de
+ */
+
 package de.sciss.infibrillae
 
 import com.pi4j.io.i2c.{I2CBus, I2CFactory}
@@ -7,15 +20,21 @@ import org.rogach.scallop.{ScallopConf, ScallopOption => Opt}
 import java.util.Locale
 import scala.swing.{Component, Dimension, MainFrame, Swing}
 
-object LDRSensorTest {
+/** Testing the light-dependent resistor through the ADS1115 converter.
+  * This can be used to find sampling rate, gain and thresholds.
+  */
+object LDRSensor {
   implicit class BinaryString(private val s: String) extends AnyVal {
     def binary: Int = Integer.parseInt(s.filter(_ != '_'), 2)
   }
 
   case class Config(
-                     maxDiff: Int = 2000,
-                     period : Int = 250,
-                     thresh : Int = 300,
+                     maxDiff: Int     = 500,
+                     period : Int     = 250,
+                     thresh : Int     = 200,
+                     view   : Boolean = true,
+                     verbose: Boolean = false,
+                     trig: () => Unit = () => ()
                    )
 
   def main(args: Array[String]): Unit = { // Create I2C bus
@@ -35,11 +54,15 @@ object LDRSensorTest {
         descr = s"Threshold for activation (default: ${default.thresh}).",
         validate = x => x > 0
       )
+      val noView: Opt[Boolean] = opt("no-view", default = Some(!default.view),
+        descr = "Do not open visual view.",
+      )
       verify()
       val config: Config = Config(
         maxDiff = maxDiff(),
         period  = period(),
         thresh  = thresh(),
+        view    = !noView(),
       )
     }
     run(p.config)
@@ -76,39 +99,40 @@ object LDRSensorTest {
     var HIST_IDX  = 0
     val history = new Array[Int](HIST_SIZE)
 
-    object view extends Component {
-      private val scaleX  = 4
-      private val width   = HIST_SIZE * scaleX
-      private val height  = 480
-      preferredSize = new Dimension(width, height)
-      opaque = true
+    lazy val view: Component =
+      new Component {
+        private val scaleX  = 4
+        private val width   = HIST_SIZE * scaleX
+        private val height  = 480
+        preferredSize = new Dimension(width, height)
+        opaque = true
 
-      override protected def paintComponent(g: swing.Graphics2D): Unit = {
-        super.paintComponent(g)
-        g.setColor(java.awt.Color.black)
-        g.fillRect(0, 0, peer.getWidth, peer.getHeight)
-        g.setColor(java.awt.Color.red)
-        val dyT = c.thresh.linLin(0, c.maxDiff.toFloat, 0, height.toFloat).toInt.clip(0, height)
-        g.fillRect(0, height - dyT - 2, width, 4)
-        var i = 1
-        var x1    = history(0)
-        var dif   = 0
-        var x     = 0
-        while (i < HIST_SIZE) {
-          val x0  = history(i)
-          dif     = Math.abs(x0 - x1)
-          x1      = x0
-          val dy  = dif.linLin(0, c.maxDiff.toFloat, 0, height.toFloat).toInt.clip(0, height)
-          val colr = if (dif > c.thresh) java.awt.Color.red else java.awt.Color.white
-          g.setColor(colr)
-          g.fillRect(x, height - dy, scaleX - 1, dy)
-          x += scaleX
-          i += 1
+        override protected def paintComponent(g: swing.Graphics2D): Unit = {
+          super.paintComponent(g)
+          g.setColor(java.awt.Color.black)
+          g.fillRect(0, 0, peer.getWidth, peer.getHeight)
+          g.setColor(java.awt.Color.red)
+          val dyT = c.thresh.linLin(0, c.maxDiff.toFloat, 0, height.toFloat).toInt.clip(0, height)
+          g.fillRect(0, height - dyT - 2, width, 4)
+          var i = 1
+          var x1    = history(0)
+          var dif   = 0
+          var x     = 0
+          while (i < HIST_SIZE) {
+            val x0  = history(i)
+            dif     = Math.abs(x0 - x1)
+            x1      = x0
+            val dy  = dif.linLin(0, c.maxDiff.toFloat, 0, height.toFloat).toInt.clip(0, height)
+            val colr = if (dif > c.thresh) java.awt.Color.red else java.awt.Color.white
+            g.setColor(colr)
+            g.fillRect(x, height - dy, scaleX - 1, dy)
+            x += scaleX
+            i += 1
+          }
         }
       }
-    }
 
-    Swing.onEDT {
+    if (c.view) Swing.onEDT {
       new MainFrame {
         title = "LDR"
         contents = view
@@ -118,7 +142,8 @@ object LDRSensorTest {
     }
 
     val data = new Array[Byte](2)
-    while (true) {
+
+    def poll(): Int = {
       // Read 2 bytes of data
       // raw_adc msb, raw_adc lsb
       device.read(0x00, data, 0, 2)
@@ -129,14 +154,25 @@ object LDRSensorTest {
       } else {
         raw_adc0 + 0x8000
       }
+      raw_adc
+    }
 
-      // Output data to screen
-      System.out.printf("AIN0: %d \n", raw_adc)
+    var prev = poll()
+    Thread.sleep(c.period)
 
-      history(HIST_IDX) = raw_adc
-      HIST_IDX += 1
-      if (HIST_IDX == HIST_SIZE) HIST_IDX = 0
-      view.repaint()
+    while (true) {
+      val next = poll()
+      if (c.verbose) System.out.printf("AIN0: %d \n", next)
+
+      if (Math.abs(next - prev) > c.thresh) c.trig()
+      prev = next
+
+      if (c.view) {
+        history(HIST_IDX) = next
+        HIST_IDX += 1
+        if (HIST_IDX == HIST_SIZE) HIST_IDX = 0
+        view.repaint()
+      }
 
       Thread.sleep(c.period)
     }

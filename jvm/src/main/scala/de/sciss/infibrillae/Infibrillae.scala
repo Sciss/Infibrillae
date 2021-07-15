@@ -33,21 +33,25 @@ import java.util.{Date, Locale, Timer, TimerTask}
 import javax.swing.{AbstractAction, BorderFactory, JComponent, JFrame, JPanel, KeyStroke, SwingUtilities, WindowConstants}
 import scala.concurrent.Future
 import scala.swing.event.ButtonClicked
-import scala.swing.{Dimension, FlowPanel, ToggleButton}
+import scala.swing.{Button, Dimension, FlowPanel, ToggleButton}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 object Infibrillae {
   case class Config(
-                   verbose      : Boolean = false,
-                   oscPort      : Int     = 57120,
-                   doubleSize   : Boolean = false,
-                   fullScreen   : Boolean = false,
-                   viewShiftX   : Int     = 0,
-                   viewShiftY   : Int     = 0,
-                   shutdownHour : Int     = 21,
-                   initDelay    : Int     = 120,
+                   verbose        : Boolean = false,
+                   oscPort        : Int     = 57120,
+                   doubleSize     : Boolean = false,
+                   fullScreen     : Boolean = false,
+                   viewShiftX     : Int     = 0,
+                   viewShiftY     : Int     = 0,
+                   shutdownHour   : Int     = 21,
+                   initDelay      : Int     = 120,
+                   ldrThresh      : Int     = 200,
+                   activateButton : Boolean = false,
                    )
+
+  val isRaspi: Boolean = sys.props("user.name") == "pi"
 
   def main(args: Array[String]): Unit = {
     Locale.setDefault(Locale.US)
@@ -80,16 +84,24 @@ object Infibrillae {
       val initDelay: Opt[Int] = opt("init-delay", default = Some(default.initDelay),
         descr = s"Initial delay in seconds (to make sure date-time is synced) (default: ${default.initDelay})."
       )
+      val activateButton: Opt[Boolean] = opt("activate-button", default = Some(default.activateButton),
+        descr = "Add a sound activation button to the UI"
+      )
+      val ldrThresh: Opt[Int] = opt("ldr-thresh", default = Some(default.ldrThresh),
+        descr = s"Light sensor threshold (default: ${default.ldrThresh})."
+      )
       verify()
       val config: Config = Config(
-        verbose       = verbose(),
-        oscPort       = oscPort(),
-        doubleSize    = doubleSize(),
-        fullScreen    = fullScreen(),
-        viewShiftX    = viewShiftX(),
-        viewShiftY    = viewShiftY(),
-        shutdownHour  = shutdownHour(),
-        initDelay     = initDelay(),
+        verbose         = verbose(),
+        oscPort         = oscPort(),
+        doubleSize      = doubleSize(),
+        fullScreen      = fullScreen(),
+        viewShiftX      = viewShiftX(),
+        viewShiftY      = viewShiftY(),
+        shutdownHour    = shutdownHour(),
+        initDelay       = initDelay(),
+        activateButton  = activateButton(),
+        ldrThresh       = ldrThresh(),
       )
     }
     run(p.config)
@@ -147,6 +159,12 @@ object Infibrillae {
     }
     p.setBorder(border)
     p.add(canvasPeer, BorderLayout.CENTER )
+    if (c.activateButton) {
+      val b = Button("Sound") {
+        visualOpt.foreach(_.activateVolume())
+      }
+      p.add(b.peer, BorderLayout.SOUTH)
+    }
 
     val fr = new JFrame(gc)
     if (c.fullScreen) {
@@ -177,6 +195,26 @@ object Infibrillae {
       case Success(v) =>
         println("Visual ready.")
         visualOpt = Some(v)
+        if (isRaspi) {
+          val sensorConf = LDRSensor.Config(
+            view    = false,
+            thresh  = c.ldrThresh,
+            trig    = () => v.activateVolume()
+          )
+          new Thread("ldr") {
+            override def run(): Unit = try {
+              LDRSensor.run(sensorConf)
+            } catch {
+              case NonFatal(ex) =>
+                println("LDR sensor failed:")
+                ex.printStackTrace()
+            }
+
+            start()
+          }
+
+          v.activateVolume()
+        }
 
       case Failure(ex) =>
         ex.printStackTrace()
@@ -199,8 +237,8 @@ object Infibrillae {
       Thread.sleep(initDelayMS)
     }
 
-    val odt       = OffsetDateTime.now()
-    val date      = Date.from(odt.toInstant)
+    val odt   = OffsetDateTime.now()
+    val date  = Date.from(odt.toInstant)
     println(s"The date and time: $date")
 
     EventQueue.invokeLater(() => mkView(c))
@@ -356,7 +394,7 @@ object Infibrillae {
 
           universe.cursor.step { implicit tx =>
             universe.auralSystem.reactNow { implicit tx => {
-              case AuralSystem.Running(server) =>
+              case AuralSystem.Running(_ /*server*/) =>
                 tx.afterCommit {
                   Visual(??? /*server*/, canvas /*, idx = SPACE_IDX*/).onComplete {
                     case Success(v) =>

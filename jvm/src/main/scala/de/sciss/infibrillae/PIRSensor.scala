@@ -1,3 +1,16 @@
+/*
+ *  PIRSensor.scala
+ *  (in|fibrillae)
+ *
+ *  Copyright (c) 2020-2021 Hanns Holger Rutz. All rights reserved.
+ *
+ *  This software is published under the GNU Affero General Public License v3+
+ *
+ *
+ *  For further information, please contact Hanns Holger Rutz at
+ *  contact@sciss.de
+ */
+
 package de.sciss.infibrillae
 
 import com.pi4j.io.gpio.event.{GpioPinDigitalStateChangeEvent, GpioPinListenerDigital}
@@ -11,7 +24,7 @@ import scala.swing.{BoxPanel, Button, MainFrame, Orientation, Swing}
 
 // attempt with the passive infrared sensors
 // (result: they don't work through the glass window)
-object PIRSensorTest {
+object PIRSensor {
   case class Config(
                    pins: List[Int] = List(0, 1)
                    )

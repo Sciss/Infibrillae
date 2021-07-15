@@ -382,6 +382,9 @@ class Visual[Ctx <: Graphics2D] private(
 
   spaceIdxUpdated()
 
+  def activateVolume(): Unit =
+    sendOSC(osc.Message("/unmute"))
+
   private def mkPoem() =
     words.iterator.zip(poemBoxes).zipWithIndex.map { case ((s, pb), pi) =>
       val bridge = if (pi == words.length - 2) -1 else if (pi == words.length - 1) +1 else 0
