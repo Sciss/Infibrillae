@@ -2,7 +2,9 @@ package de.sciss.infibrillae
 
 import com.pi4j.io.i2c.{I2CBus, I2CFactory}
 import de.sciss.numbers.Implicits._
+import org.rogach.scallop.{ScallopConf, ScallopOption => Opt}
 
+import java.util.Locale
 import scala.swing.{Component, Dimension, MainFrame, Swing}
 
 object LDRSensorTest {
@@ -10,7 +12,34 @@ object LDRSensorTest {
     def binary: Int = Integer.parseInt(s.filter(_ != '_'), 2)
   }
 
+  case class Config(
+                     maxDiff: Int = 2000,
+                     period  : Int = 250,
+                   )
+
   def main(args: Array[String]): Unit = { // Create I2C bus
+    Locale.setDefault(Locale.US)
+    object p extends ScallopConf(args) {
+      private val default = Config()
+
+      val maxDiff: Opt[Int] = opt("max-diff", default = Some(default.maxDiff),
+        descr = s"Maximum sample difference (default: ${default.maxDiff}).",
+        validate = x => x > 0
+      )
+      val period: Opt[Int] = opt("period", default = Some(default.period),
+        descr = s"Period between samples in milliseconds (default: ${default.period}).",
+        validate = x => x > 0
+      )
+      verify()
+      val config: Config = Config(
+        maxDiff = maxDiff(),
+        period  = period(),
+      )
+    }
+    run(p.config)
+  }
+
+  def run(c: Config): Unit = {
     val bus = I2CFactory.getInstance(I2CBus.BUS_1)
     // Get I2C device, ADS1115 I2C address is 0x48(72)
     val device = bus.getDevice(0x48)
@@ -32,9 +61,9 @@ object LDRSensorTest {
     // AINP = AIN0 and AINN = AIN1, +/- 2.048V, Continuous conversion mode, 128 Hz
     //        byte[] config = { (byte) 0b1_000_010_0, (byte) 0b100_00011 };
     // +/- 1.024V, Continuous conversion mode, 8 Hz
-    val config = Array("1_000_011_0".binary.toByte, "000_00011".binary.toByte)
+    val adcConf = Array("1_000_011_0".binary.toByte, "000_00011".binary.toByte)
     // Select configuration register
-    device.write(0x01, config, 0, 2)
+    device.write(0x01, adcConf, 0, 2)
     Thread.sleep(500)
 
     val HIST_SIZE = 128
@@ -57,10 +86,10 @@ object LDRSensorTest {
         var x     = 0
         while (i < HIST_SIZE) {
           val x0  = history(i)
-          dif     = x0 - x1
+          dif     = Math.abs(x0 - x1)
           x1      = x0
-          val dy  = dif.linLin(0, 2000, 0, height).toInt.clip(0, height)
-          g.fillRect(x, height, x + scaleX - 1, height - dy)
+          val dy  = dif.linLin(0, c.maxDiff.toFloat, 0, height.toFloat).toInt.clip(0, height)
+          g.fillRect(x, height - dy, scaleX - 1, dy)
           x += scaleX
           i += 1
         }
@@ -98,7 +127,7 @@ object LDRSensorTest {
       if (HIST_IDX == HIST_SIZE) HIST_IDX = 0
       view.repaint()
 
-      Thread.sleep(250)
+      Thread.sleep(c.period)
     }
   }
 }
