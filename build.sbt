@@ -1,7 +1,7 @@
 import sbtcrossproject.Platform
 
 lazy val baseNameL      = "infibrillae"
-lazy val projectVersion = "0.3.0-SNAPSHOT"
+lazy val projectVersion = "0.3.0"
 
 lazy val deps = new {
   val main = new {
