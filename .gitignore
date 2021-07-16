@@ -11,3 +11,4 @@ lib/main*
 /*.bin
 assets/*.bin
 jvm/infibrillae.jar
+/upload-test.sh
