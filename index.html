@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -72,7 +72,15 @@
         margin-right: auto;
       }
 
-      #descr {
+      #link {
+        display: none;
+      }
+
+      #desc {
+        display: none;
+      }
+      
+      #tech {
         display: none;
       }
 
@@ -84,32 +92,75 @@
 }
     </style>
 <body>
-<div id="header" >
-<h1>in|fibrillae</h1>
-<h2>A sound piece for the web browser</h2>
-<p>Hanns Holger Rutz &amp; Nayar&iacute; Castillo, 2021. <input type='button' id='show-descr' value='details'></p>
-    <div id="descr">
-<p>
-    For more information, please
-    see <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/1111185" target="_blank">project documentation</a>.
-    Minimum browser requirement: Firefox&nbsp;79, Chrome/Chromium&nbsp;68. Firefox 88 or newer recommended. Mobile phones currently not supported.
-</p><p>
-    Press the <em>Start</em> button to begin. It may take some time until you hear the first bleeps and noises.
-    If the microphone is enabled (default), be aware that feedback sounds may occur.
-    Please feel invited to keep the page open while turning to other activities on your
-    computer. While the work is marked as in-progress, if you revisit this page, please purge the cache and
-    explicitly reload (<kbd>ctrl</kbd>-<kbd>R</kbd>) the page in the browser, as there might be updates. Thank you!
-</p><p>
-    Also note that sound may be choppy sometimes, it seems the current web audio implementation comes to its limits.
-    This happens for example on Chromium&nbsp;90 Linux.
-    We are planning to address this, and also to release a desktop downloadable version of the piece.
-</p><p>
-    The piece released under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)
-    license. The underlying software released under AGPL and GPL licenses. The font is Voltaire-Regular by
-    Yvonne Sch&uuml;ttler, released under Open Font License.
-    Please refer to the
-    <a class="infib-ext" href="https://github.com/Sciss/Infibrillae" target="_blank">source repository</a>.
-</p>
+<div id="header">
+    <h1>in|fibrillae</h1>
+    <h2>a sound poem for the web browser</h2>
+    <p>Hanns Holger Rutz &amp; Nayar&iacute; Castillo, 2021.
+        <input type='button' id='show-desc' value='about'>
+        <input type='button' id='show-tech' value='technical'>
+    </p>
+    <div id="link">
+        <p>
+            For more information, please see
+            <a class="infib-ext" href="https://www.researchcatalogue.net/view/711664/1111185" target="_blank">project
+            documentation</a>.
+            Minimum browser requirement: Firefox&nbsp;79, Chrome/Chromium&nbsp;68. Firefox 88 or newer recommended.
+            Mobile phones currently not supported.
+        </p>
+    </div>
+    <div id="desc">
+        <p>
+            <em>in|fibrillae</em> is a reconfiguration of an audio-visual installation into the online browser space. It
+            is loosely based on a previous piece <em>in|filtration</em>, unravelling it into hundreds and thousands of
+            small fibres, in order to transpose the original materiality for a personal space.
+        </p>
+        <p>
+            The piece is about exchange between otherwise disconnected and “uncommunicative” segments, departing from
+            forms of spatiality: the distinction between a common space and an individual (or inner) space. The common
+            is a repertoire of shared topological forms for sound structures. It is individuated through automatically
+            programmed synthetic sounds, yielding the distinct corpora of virtual sub-spaces. The pure sonic layer is
+            complemented by a layer of animated digital image and text fragments. The images are based on wax paper
+            prints taken from cut tree branches in Caracas, and the bulge that the trees regrow around the cut producing
+            a visible boundary surface. Each sub-space corresponds to a poem, a set of words that belong together. They
+            appear in permutations inside the trunk drawings.
+        </p>
+        <p>
+            Several variants are part of the piece, forming “layers” arranged in a carousel like manner. You can move
+            around the virtual space with the mouse, or when inactive let a digital agent wanders around, thus exploring
+            the space and reshaping the poems and sound. When a red word appears, the carousel moves to the next
+            sub-space.
+            We deem the piece in-progress, since some elements that we consider have not yet been explored or
+            implemented: there are currently three sub-spaces (we aim for six), and a reverberant “shadow” of
+            neighbouring sub-spaces is envisioned.
+        </p>
+        <p>
+            <em>in|fibrillae</em> was presented at the 9th Conference on Computation, Communication,
+            Aesthetics &amp; X (xCoAx), and is described in its proceedings.
+        </p>
+    </div>
+    <div id="tech">
+        <p>
+            Press the <em>Start</em> button to begin. It may take some time until you hear the first bleeps and noises.
+            If the microphone is enabled (default), be aware that feedback sounds may occur.
+            Please feel invited to keep the page open while turning to other activities on your
+            computer. While the work is marked as in-progress, if you revisit this page, please purge the cache and
+            explicitly reload (<kbd>ctrl</kbd>-<kbd>R</kbd>) the page in the browser, as there might be updates. Thank
+            you!
+        </p>
+        <p>
+            Also note that sound may be choppy sometimes, it seems the current web audio implementation comes to its
+            limits.
+            This happens for example on Chromium&nbsp;90 Linux.
+            We are planning to address this, and also to release a desktop downloadable version of the piece.
+        </p>
+        <p>
+            The piece released under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC
+            BY-NC-ND 4.0)
+            license. The underlying software released under AGPL and GPL licenses. The font is Voltaire-Regular by
+            Yvonne Sch&uuml;ttler, released under Open Font License.
+            Please refer to the
+            <a class="infib-ext" href="https://github.com/Sciss/Infibrillae" target="_blank">source repository</a>.
+        </p>
     </div>
 </div>
 <!-- cf. https://stackoverflow.com/questions/12886286/addeventlistener-for-keydown-on-canvas -->
@@ -170,16 +221,37 @@
     };
   };
 
-  var ggInfo = document.getElementById('show-descr'); // Assumes element with id='button'
+  var ggDesc  = document.getElementById('show-desc');
+  var ggTech  = document.getElementById('show-tech' );
+  var divLink = document.getElementById('link');
+  var divDesc = document.getElementById('desc');
+  var divTech = document.getElementById('tech');
 
-  ggInfo.onclick = function() {
-    var div = document.getElementById('descr');
-    if (div.style.display === 'block') {
-      div.style.display = 'none';
-      ggInfo.value = 'details';
+  ggDesc.onclick = function() {
+    if (divDesc.style.display === 'block') {
+      divLink.style.display = 'none';
+      divDesc.style.display = 'none';
+      ggDesc.value = 'about';
     } else {
-      div.style.display = 'block';
-      ggInfo.value = 'hide';
+      divLink.style.display = 'block';
+      divDesc.style.display = 'block';
+      divTech.style.display = 'none';
+      ggDesc.value = 'hide';
+      ggTech.value = 'technical';
+   }
+  };
+
+  ggTech.onclick = function() {
+    if (divTech.style.display === 'block') {
+      divLink.style.display = 'none';
+      divTech.style.display = 'none';
+      ggTech.value = 'technical';
+    } else {
+      divLink.style.display = 'block';
+      divTech.style.display = 'block';
+      divDesc.style.display = 'none';
+      ggTech.value = 'hide';
+      ggDesc.value = 'about';
     }
   };
 
